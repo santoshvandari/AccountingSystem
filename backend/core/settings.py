@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework', # Django REST Framework for API development
     'corsheaders', # CORS headers for cross-origin requests
+    'accounts',  # Custom app for user management
 
 
 
@@ -156,3 +157,8 @@ SIMPLE_JWT = {
 #     "http://localhost:3000",  # React app running on localhost
 # ]
 CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins for development; restrict in production
+
+
+
+# Custom user model
+AUTH_USER_MODEL = 'accounts.User'  # Use the custom user model defined in accounts app
