@@ -40,17 +40,24 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
+    'rest_framework', # Django REST Framework for API development
+    'corsheaders', # CORS headers for cross-origin requests
+
+
+
+    'drf_yasg',  # For API documentation Swagger
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS middleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -142,3 +149,10 @@ SIMPLE_JWT = {
     # "SIGNING_KEY": "<Use Strong in Production>",  # ToDo: Use a more secure key in production
 
 }
+
+
+# CORS settings
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",  # React app running on localhost
+# ]
+CORS_ALLOW_ALL_ORIGINS = True  # Allow all origins for development; restrict in production
