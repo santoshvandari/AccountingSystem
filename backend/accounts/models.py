@@ -18,7 +18,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     # profile_image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
 
     # Role & access
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='cashier')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser=models.BooleanField(default=False)
@@ -29,7 +29,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'full_name']
+    REQUIRED_FIELDS = ['username', 'full_name',"role"]
 
     def __str__(self):
         return f"{self.email} {self.full_name} ({self.role})"

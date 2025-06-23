@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Create your views here.
 class UserView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
+    permission_classes = [permissions.IsAdminUser] 
     def get(self, request):
         """
         Returns the current user's information.
@@ -33,8 +32,9 @@ class UserView(APIView):
         """
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
-            return Response({"message": "User registered successfully", "user": serializer.data}, status=status.HTTP_201_CREATED)
+            user = User.objects.create_user(**serializer.data)
+            print(user)
+            return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
