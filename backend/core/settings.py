@@ -148,9 +148,6 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=3),
     # "SIGNING_KEY": "<Use Strong in Production>",  # ToDo: Use a more secure key in production
-    "AUTH_HEADER_TYPES": ("Bearer",),
-    "BLACKLIST_AFTER_ROTATION": True,  # Blacklist old tokens after rotation
-    "ROTATE_REFRESH_TOKENS": False,  # Disable refresh token rotation for simplicity
 
 
 }
