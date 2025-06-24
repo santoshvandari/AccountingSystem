@@ -24,12 +24,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_superuser=models.BooleanField(default=False)
 
     # Metadata
-    date_joined = models.DateTimeField(default=datetime.now)
-
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'full_name',"role"]
+    REQUIRED_FIELDS = ['username', 'full_name']
 
     def __str__(self):
         return f"{self.email} {self.full_name} ({self.role})"

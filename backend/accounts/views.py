@@ -19,13 +19,18 @@ logger = logging.getLogger(__name__)
 
 # Create your views here.
 class UserView(APIView):
-    permission_classes = [permissions.IsAdminUser] 
+    permission_classes = [permissions.IsAuthenticated]   
+    # Get the Individual user information  
     def get(self, request):
         """
         Returns the current user's information.
         """
-        pass
+        user = User.objects.all()
+        serializer = UserSerializer(user, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
+    # Register a new user
+    permission_classes = [permissions.IsAdminUser] # Only admin can register new users
     def post(self, request):
         """
         Registers a new user.
@@ -36,6 +41,8 @@ class UserView(APIView):
             print(user)
             return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# class 
 
 
 class LogenView(APIView):
