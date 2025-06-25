@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
-from accounts.serializers import UserSerializer,LoginSerializer,ProfileViewSerializer
+from accounts.serializers import ChangePasswordSerializer, UserSerializer,LoginSerializer,ProfileViewSerializer
 
 from django.contrib.auth import authenticate
 from accounts.utils import get_tokens_for_user
@@ -132,4 +132,19 @@ class ProfileView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+# Change Password View
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """
+        Changes the password of the authenticated user.
+        """
+        user = request.user
+        serializer = ChangePasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
