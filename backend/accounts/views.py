@@ -29,7 +29,12 @@ class UserView(APIView):
         serializer = UserSerializer(user, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # Register a new user
+
+# Register a new user
+class RegisterView(APIView):
+    """
+    Handles user registration and updates.
+    """
     permission_classes = [permissions.IsAdminUser] # Only admin can register new users
     def post(self, request):
         """
@@ -41,6 +46,9 @@ class UserView(APIView):
             return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Update the user information
+class UpdateUserView(APIView):
+    permission_classes = [permissions.IsAuthenticated]  # Only authenticated users can update their information   
     def put(self, request):
         """
         Updates the current user's information.
@@ -58,8 +66,9 @@ class UserView(APIView):
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-
-        
+# Delete the user account
+class DeleteUserView(APIView):
+    permission_classes = [permissions.IsAdminUser]  # Only authenticated users can delete their account       
     def delete(self, request):
         """
         Deletes the current user.
@@ -123,6 +132,13 @@ class ProfileView(APIView):
         serializer = ProfileViewSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+# Update Profile View
+class UpdateProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    """
+    Handles updating the profile of the authenticated user.
+    """
     def put(self, request):
         """
         Updates the profile of the authenticated user.
