@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'rest_framework', # Django REST Framework for API development
     'corsheaders', # CORS headers for cross-origin requests
     'accounts',  # Custom app for user management
+    'transactions',  # Custom app for transaction management
 
 
 
