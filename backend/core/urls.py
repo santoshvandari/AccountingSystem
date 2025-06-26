@@ -46,6 +46,9 @@ urlpatterns = [
     # Accounts app URLs
     path('api/accounts/', include('accounts.urls')),
 
+    # Transactions app URLs
+    path('api/transactions/', include('transactions.urls')),
+
 
 
 ]
