@@ -2,3 +2,5 @@
 /db.sqlite3
 __pycache__
 000*.py
+*.txt
+*.log
