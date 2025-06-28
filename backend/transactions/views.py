@@ -40,9 +40,8 @@ class CreateTransaction(APIView):
 
 class UpdateTransaction(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    
-    def put(self, request):
-        transaction_id = request.data.pop("id", None)
+
+    def put(self, request, transaction_id=None):
         if not transaction_id:
             return Response({"error": "Transaction ID is required"}, status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -54,3 +53,17 @@ class UpdateTransaction(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"message": "Transaction Updated Successfully"}, status=status.HTTP_200_OK)
+    
+class GetTransactionDetail(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, transaction_id=None):
+        if not transaction_id:
+            return Response({"error": "Transaction ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            transaction = Transaction.objects.get(id=transaction_id)
+        except Transaction.DoesNotExist:
+            return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = TransactionSerializer(transaction)
+        return Response(serializer.data, status=status.HTTP_200_OK)
