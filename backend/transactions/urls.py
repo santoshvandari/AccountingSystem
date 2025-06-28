@@ -1,14 +1,12 @@
 from django.urls import path
 from transactions import views
-from rest_framework import status,permissions
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from transactions import views
 
 
 
 urlpatterns = [
-    # path("/")
+    path("",views.GetTransaction.as_view(),name="GetTransactions"),
+    path("create/",views.CreateTransaction.as_view(),name="CreateTransaction")
+
 ]
 
 
