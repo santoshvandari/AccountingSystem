@@ -5,7 +5,8 @@ from transactions import views
 
 urlpatterns = [
     path("",views.GetTransaction.as_view(),name="GetTransactions"),
-    path("create/",views.CreateTransaction.as_view(),name="CreateTransaction")
+    path("create/",views.CreateTransaction.as_view(),name="CreateTransaction"),
+    path("update/",views.UpdateTransaction.as_view(),name="UpdateTransaction"),
 
 ]
 
