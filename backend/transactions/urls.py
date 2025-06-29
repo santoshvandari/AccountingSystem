@@ -8,6 +8,7 @@ urlpatterns = [
     path("create/",views.CreateTransaction.as_view(),name="CreateTransaction"),
     path("update/<int:transaction_id>/",views.UpdateTransaction.as_view(),name="UpdateTransaction"),
     path("details/<int:transaction_id>/", views.GetTransactionDetail.as_view(), name="GetTransactionDetail"),
+    path("summary/", views.GetTransactionSummary.as_view(), name="GetTransactionSummary"),
 
 ]
 

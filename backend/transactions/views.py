@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
-from transactions.serializer import TransactionSerializer,UpdateTransactionSerializer
+from transactions.serializer import GetTransactionSummarySerializer, TransactionSerializer,UpdateTransactionSerializer
 from transactions.models import Transaction
 
 from django.contrib.auth import get_user_model
@@ -67,3 +67,37 @@ class GetTransactionDetail(APIView):
         
         serializer = TransactionSerializer(transaction)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+class GetTransactionSummary(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Get a summary of all transactions including total income, total expense, and balance of the Daily, Weekly and Monthly. 
+        """
+        serializer = GetTransactionSummarySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        start_date = serializer.validated_data.get('start_date')
+        end_date = serializer.validated_data.get('end_date')
+
+        transactions = Transaction.objects.filter(date__range=[start_date, end_date])
+        
+        if duration == 'daily':
+            transactions = transactions.filter(date=start_date)
+        elif duration == 'weekly':
+            transactions = transactions.filter(date__week=start_date.isocalendar()[1])
+        elif duration == 'monthly':
+            transactions = transactions.filter(date__month=start_date.month)
+
+        total_income = sum(t.amount for t in transactions if t.amount > 0)
+        total_expense = sum(t.amount for t in transactions if t.amount < 0)
+        balance = total_income + total_expense
+
+        summary = {
+            "total_income": total_income,
+            "total_expense": total_expense,
+            "balance": balance
+        }
+
+        return Response(summary, status=status.HTTP_200_OK)
+        

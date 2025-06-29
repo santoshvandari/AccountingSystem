@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from transactions.models import Transaction
 from django.contrib.auth import get_user_model
+from datetime import datetime,timezone
 
 User= get_user_model()
 
@@ -30,3 +31,19 @@ class UpdateTransactionSerializer(serializers.Serializer):
         instance.date = validated_data.get('date', instance.date)
         instance.save()
         return instance
+    
+class GetTransactionSummarySerializer(serializers.Serializer):
+    start_date = serializers.DateField(write_only=True)
+    end_date = serializers.DateField(write_only=True)
+
+    def validate(self, attrs):
+        current_date = datetime.now(timezone.utc).date()
+        start_date = attrs['start_date']
+        end_date = attrs['end_date']
+        if start_date > current_date or end_date > current_date:
+            raise serializers.ValidationError("Date cannot be in the future.")
+        if start_date > end_date:
+            raise serializers.ValidationError("Start date cannot be after end date.")
+        attrs['start_date'] = start_date
+        attrs['end_date'] = end_date
+        return attrs
