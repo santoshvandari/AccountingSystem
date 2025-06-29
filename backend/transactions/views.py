@@ -6,6 +6,7 @@ from transactions.serializer import GetTransactionSummarySerializer, Transaction
 from transactions.models import Transaction
 
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 
 
 import logging
@@ -73,30 +74,34 @@ class GetTransactionSummary(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        """Get a summary of all transactions including total income, total expense, and balance of the Daily, Weekly and Monthly. 
+        """
+        Get a summary of all transactions including total income, total expense, and balance 
+        within the specified date range.
         """
         serializer = GetTransactionSummarySerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
+
         start_date = serializer.validated_data.get('start_date')
         end_date = serializer.validated_data.get('end_date')
 
-        transactions = Transaction.objects.filter(date__range=[start_date, end_date])
-        
-        if duration == 'daily':
-            transactions = transactions.filter(date=start_date)
-        elif duration == 'weekly':
-            transactions = transactions.filter(date__week=start_date.isocalendar()[1])
-        elif duration == 'monthly':
-            transactions = transactions.filter(date__month=start_date.month)
+        transactions = Transaction.objects.filter(created_at__range=[start_date, end_date])
 
-        total_income = sum(t.amount for t in transactions if t.amount > 0)
-        total_expense = sum(t.amount for t in transactions if t.amount < 0)
+        if not transactions.exists():
+            return Response({"message": "No transactions found for the given date range."}, status=status.HTTP_404_NOT_FOUND)
+
+        aggregates = transactions.aggregate(
+            total_income=sum('amount', filter=Q(amount__gt=0)),
+            total_expense=sum('amount', filter=Q(amount__lt=0)),
+        )
+
+        total_income = aggregates['total_income'] or 0
+        total_expense = aggregates['total_expense'] or 0
         balance = total_income + total_expense
 
         summary = {
             "total_income": total_income,
             "total_expense": total_expense,
-            "balance": balance
+            "balance": balance,
         }
 
         return Response(summary, status=status.HTTP_200_OK)
