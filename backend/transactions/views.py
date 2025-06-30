@@ -6,7 +6,7 @@ from transactions.serializer import GetTransactionSummarySerializer, Transaction
 from transactions.models import Transaction
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import Q,Sum
 
 
 import logging
@@ -68,7 +68,24 @@ class GetTransactionDetail(APIView):
         
         serializer = TransactionSerializer(transaction)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
+class DeleteTransaction(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def delete(self, request, transaction_id=None):
+        """
+        Delete a transaction by its ID. Only accessible by admin users.
+        """
+        if not transaction_id:
+            return Response({"error": "Transaction ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            transaction = Transaction.objects.get(id=transaction_id)
+        except Transaction.DoesNotExist:
+            return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        transaction.delete()
+        return Response({"message": "Transaction Deleted Successfully"}, status=status.HTTP_204_NO_CONTENT)
+
 
 class GetTransactionSummary(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -90,8 +107,8 @@ class GetTransactionSummary(APIView):
             return Response({"message": "No transactions found for the given date range."}, status=status.HTTP_404_NOT_FOUND)
 
         aggregates = transactions.aggregate(
-            total_income=sum('amount', filter=Q(amount__gt=0)),
-            total_expense=sum('amount', filter=Q(amount__lt=0)),
+            total_income=Sum('amount', filter=Q(amount__gt=0)),
+            total_expense=Sum('amount', filter=Q(amount__lt=0)),
         )
 
         total_income = aggregates['total_income'] or 0
