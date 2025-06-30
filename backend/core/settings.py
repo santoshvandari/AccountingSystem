@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'corsheaders', # CORS headers for cross-origin requests
     'accounts',  # Custom app for user management
     'transactions',  # Custom app for transaction management
+    'billing',  # Custom app for billing management
 
 
 

@@ -3,7 +3,13 @@ accounts	User authentication, JWT login/logout, roles (Admin, Manager, Cashier)
 business	Business type setup and profile configuration (shop, hotel, etc.)
 chartofaccounts	Manage the chart of accounts, account groups, and categories
 transactions	Record income and expenses with multiple payment types
-billing	Bill generation and management (includes PDF export)
+billing 	Bill generation and management (includes PDF export)
 reports	Financial reports (P&L, Balance Sheet, Cash Flow)
 backup (optional in Phase 1)	Data backup/restore logic
 common (shared utilities)	Common utilities like Nepali date formatting, constants, shared mixins
+
+
+Completed: 
+- accounts
+- transactions
+- billing
