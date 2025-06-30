@@ -19,4 +19,4 @@ class Bill(models.Model):
         ordering = ['-issued_at']
 
     def __str__(self):
-        return f"Bill #{self.bill_number} for Rs.{self.amount}"
+        return f"Bill #{self.bill_number} for Rs.{self.amount} to {self.billed_to}"
