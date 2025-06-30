@@ -6,17 +6,21 @@ from datetime import datetime,timezone
 User= get_user_model()
 
 
-class UserSerizlizer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model=User
         fields=["email","username","full_name","phone_number"]
 
-class TransactionSerializer(serializers.ModelSerializer):
-    user = UserSerizlizer()
+class GetTransactionSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
     class Meta:
         model = Transaction
         fields="__all__"
         
+class CreateTransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Transaction
+        fields = "__all__"
 
 class UpdateTransactionSerializer(serializers.Serializer):
     received_from = serializers.CharField(write_only=True)
