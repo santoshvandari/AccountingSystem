@@ -50,7 +50,7 @@ urlpatterns = [
     path('api/transactions/', include('transactions.urls')),
 
     # Billing app URLs
-    path('api/billing/', include('billing.urls')),
+    path('api/bills/', include('billing.urls')),
 
 
 
