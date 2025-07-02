@@ -2,5 +2,8 @@ from django.urls import path
 from billing import views
 
 urlpatterns = [
-    path("")
+    path("", views.BillListCreateView.as_view(), name="bill-list-create"),
+    path("<int:id>/", views.BillDetailView.as_view(), name="bill-detail"),
+    path("<int:id>/update/", views.BillUpdateView.as_view(), name="bill-update"),
+    path("<int:id>/pdf/", views.BillPDFView.as_view(), name="bill-pdf"),
 ]
