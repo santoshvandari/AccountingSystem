@@ -5,7 +5,10 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import TransactionsPage from './pages/TransactionsPage';
 import BillsPage from './pages/BillsPage';
+import UsersPage from './pages/UsersPage';
+import SettingsPage from './pages/SettingsPage';
 import Loading from './components/Loading/Loading';
+import './App.css';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -74,6 +77,24 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <BillsPage />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute>
+            <UsersPage />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
           </ProtectedRoute>
         }
       />
