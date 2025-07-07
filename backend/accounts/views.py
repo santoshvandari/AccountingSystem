@@ -86,7 +86,7 @@ class DeleteUserView(APIView):
 # class 
 
 # User Login View
-class LogenView(APIView):
+class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
