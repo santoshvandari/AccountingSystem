@@ -7,6 +7,7 @@ from accounts.serializers import ChangePasswordSerializer, UserSerializer,LoginS
 from django.contrib.auth import authenticate
 from accounts.utils import get_tokens_for_user
 from django.contrib.auth import get_user_model
+from accounts.manager import UserManager
 
 
 import logging
@@ -42,9 +43,12 @@ class RegisterView(APIView):
         """
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
-            user = User.objects.create_user(**serializer.data)
-            return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                User.objects.create_user(**serializer.validated_data)
+                return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                logger.error(f"User registration error: {e}")
+                return Response({"error":"User Registration Failed"}, status=status.HTTP_400_BAD_REQUEST)
 
 # Update the user information
 class UpdateUserView(APIView):
@@ -86,7 +90,7 @@ class DeleteUserView(APIView):
 # class 
 
 # User Login View
-class LogenView(APIView):
+class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):

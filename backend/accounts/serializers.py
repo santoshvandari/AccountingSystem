@@ -7,7 +7,12 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model=User
-        exclude = ["id","password",'groups','user_permissions']
+        exclude = ["id",'groups','user_permissions']
+        extra_kwargs ={
+            'password': {'write_only': True, },
+            'role': {'default': 'cashier'}  # Default role is cashier
+        }
+    
 
     
 class LoginSerializer(serializers.Serializer):
