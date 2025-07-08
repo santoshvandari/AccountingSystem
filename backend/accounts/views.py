@@ -43,11 +43,12 @@ class RegisterView(APIView):
         """
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
-            user = User.objects.create_user(**serializer.validated_data)
-            if not user:
-                return Response({"error": "User registration failed"}, status=status.HTTP_400_BAD_REQUEST)
-            return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                User.objects.create_user(**serializer.validated_data)
+                return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                logger.error(f"User registration error: {e}")
+                return Response({"error":"User Registration Failed"}, status=status.HTTP_400_BAD_REQUEST)
 
 # Update the user information
 class UpdateUserView(APIView):
