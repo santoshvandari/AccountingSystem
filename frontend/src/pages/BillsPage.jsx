@@ -368,11 +368,9 @@ const BillsPage = () => {
                 required
               />
               
-              <InputField
+              <CurrencyInput
                 label="Amount"
                 name="amount"
-                type="number"
-                step="0.01"
                 value={formData.amount}
                 onChange={handleFormChange}
                 error={formErrors.amount}
