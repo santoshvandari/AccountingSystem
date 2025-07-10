@@ -5,6 +5,7 @@ import Card from '../components/Card/Card';
 import Loading from '../components/Loading/Loading';
 import Alert from '../components/Alert/Alert';
 import { transactionAPI, billingAPI } from '../api';
+import { formatCurrency } from '../config/currency';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -68,8 +69,8 @@ const DashboardPage = () => {
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-600">{title}</p>
           <p className="text-2xl font-bold text-gray-900">
-            {typeof value === 'number' && title.toLowerCase().includes('amount') 
-              ? `$${value.toLocaleString('en-US', { minimumFractionDigits: 2 })}` 
+            {typeof value === 'number' && (title.toLowerCase().includes('amount') || title.toLowerCase().includes('revenue') || title.toLowerCase().includes('value'))
+              ? formatCurrency(value)
               : value.toLocaleString()
             }
           </p>
@@ -117,7 +118,7 @@ const DashboardPage = () => {
               </div>
               <div className="text-right">
                 <p className="font-semibold text-gray-900">
-                  ${parseFloat(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {formatCurrency(item.amount)}
                 </p>
                 {type === 'bills' && item.bill_number && (
                   <p className="text-xs text-gray-500">#{item.bill_number}</p>

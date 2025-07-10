@@ -5,9 +5,11 @@ import Button from '../components/Button/Button';
 import Table from '../components/Table/Table';
 import Modal from '../components/Modal/Modal';
 import InputField from '../components/InputField/InputField';
+import CurrencyInput from '../components/CurrencyInput/CurrencyInput';
 import Loading from '../components/Loading/Loading';
 import Alert from '../components/Alert/Alert';
 import { billingAPI } from '../api';
+import { formatCurrency } from '../config/currency';
 import { Plus, Edit, Trash2, Eye, Search, Download } from 'lucide-react';
 
 const BillsPage = () => {
@@ -194,7 +196,7 @@ const BillsPage = () => {
     {
       key: 'amount',
       header: 'Amount',
-      render: (bill) => `$${parseFloat(bill.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+      render: (bill) => formatCurrency(bill.amount)
     },
     {
       key: 'note',
@@ -321,7 +323,7 @@ const BillsPage = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Amount</label>
                 <p className="mt-1 text-sm text-gray-900">
-                  ${parseFloat(selectedBill?.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {formatCurrency(selectedBill?.amount || 0)}
                 </p>
               </div>
               <div>
