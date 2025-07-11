@@ -108,12 +108,15 @@ const UsersPage = () => {
     }
 
     try {
-      await authAPI.deleteUser(user.email);
+      const res=await authAPI.deleteUser(user.email);
+      if(res.status !== 204) {
+        throw new Error('Failed to delete user');
+      }
       setUsers(prev => prev.filter(u => u.id !== user.id));
-      alert('User deleted successfully');
+      alert(`User "${user.full_name}" has been deleted successfully`);
     } catch (err) {
-      alert('Failed to delete user');
       console.error('Delete user error:', err);
+      alert(`Failed to delete user: ${err.message || 'Unknown error'}`);
     }
   };
 

@@ -66,7 +66,7 @@ class GetTransactionDetail(APIView):
         except Transaction.DoesNotExist:
             return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
         
-        serializer = TransactionSerializer(transaction)
+        serializer = GetTransactionSerializer(transaction)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class DeleteTransaction(APIView):
