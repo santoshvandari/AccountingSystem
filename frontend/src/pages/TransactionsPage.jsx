@@ -5,9 +5,11 @@ import Button from '../components/Button/Button';
 import Table from '../components/Table/Table';
 import Modal from '../components/Modal/Modal';
 import InputField from '../components/InputField/InputField';
+import CurrencyInput from '../components/CurrencyInput/CurrencyInput';
 import Loading from '../components/Loading/Loading';
 import Alert from '../components/Alert/Alert';
 import { transactionAPI } from '../api';
+import { formatCurrency } from '../config/currency';
 import { Plus, Edit, Trash2, Eye, Search } from 'lucide-react';
 
 const TransactionsPage = () => {
@@ -166,7 +168,7 @@ const TransactionsPage = () => {
         {
             key: 'amount',
             header: 'Amount',
-            render: (transaction) => `$${parseFloat(transaction.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+            render: (transaction) => formatCurrency(transaction.amount)
         },
         {
             key: 'note',
@@ -281,7 +283,7 @@ const TransactionsPage = () => {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Amount</label>
                                 <p className="mt-1 text-sm text-gray-900">
-                                    ${parseFloat(selectedTransaction?.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    {formatCurrency(selectedTransaction?.amount || 0)}
                                 </p>
                             </div>
                             <div>
@@ -306,11 +308,9 @@ const TransactionsPage = () => {
                                 required
                             />
 
-                            <InputField
+                            <CurrencyInput
                                 label="Amount"
                                 name="amount"
-                                type="number"
-                                step="0.01"
                                 value={formData.amount}
                                 onChange={handleFormChange}
                                 error={formErrors.amount}
