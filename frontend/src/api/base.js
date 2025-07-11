@@ -37,12 +37,12 @@ const apiRequest = async (endpoint, options = {}) => {
         // Try to parse JSON if possible
         let data;
         const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
+        if (contentType && contentType.includes('application/json') && response.status !== 204) {
             data = await response.json();
         } else {
             data = await response.text();
         }
-
+        
         if (!response.ok) {
             // Attach detailed error info
             if (response.status === 401) {
@@ -129,10 +129,11 @@ const Base = {
      * @param {string} endpoint - API endpoint
      * @returns {Promise} Promise with response data
      */
-    delete: (endpoint) => {
+    delete: (endpoint, payload) => {
         return apiRequest(endpoint, {
             method: 'DELETE',
-            headers: createHeaders()
+            headers: createHeaders(),
+            body: payload ? JSON.stringify(payload) : undefined
         });
     },
 };

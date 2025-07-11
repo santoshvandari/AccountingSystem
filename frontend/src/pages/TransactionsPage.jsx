@@ -80,17 +80,20 @@ const TransactionsPage = () => {
     };
 
     const handleDelete = async (transaction) => {
-        if (!window.confirm('Are you sure you want to delete this transaction?')) {
+        if (!window.confirm(`Are you sure you want to delete this transaction from ${transaction.received_from}?`)) {
             return;
         }
 
         try {
-            await transactionAPI.deleteTransaction(transaction.id);
+            const res = await transactionAPI.deleteTransaction(transaction.id);
+            if (res.status !== 204) {
+                throw new Error('Failed to delete transaction');
+            }
             setTransactions(prev => prev.filter(t => t.id !== transaction.id));
-            alert('Transaction deleted successfully');
+            alert(`Transaction from "${transaction.received_from}" has been deleted successfully`);
         } catch (err) {
-            alert('Failed to delete transaction');
             console.error('Delete transaction error:', err);
+            alert(`Failed to delete transaction: ${err.message || 'Unknown error'}`);
         }
     };
 

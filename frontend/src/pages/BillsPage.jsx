@@ -88,17 +88,20 @@ const BillsPage = () => {
   };
 
   const handleDelete = async (bill) => {
-    if (!window.confirm('Are you sure you want to delete this bill?')) {
+    if (!window.confirm(`Are you sure you want to delete bill #${bill.bill_number || bill.id} for ${bill.billed_to}?`)) {
       return;
     }
 
     try {
-      await billingAPI.deleteBill(bill.id);
+      const res = await billingAPI.deleteBill(bill.id);
+      if (res.status !== 204) {
+        throw new Error('Failed to delete bill');
+      }
       setBills(prev => prev.filter(b => b.id !== bill.id));
-      alert('Bill deleted successfully');
+      alert(`Bill #${bill.bill_number || bill.id} for "${bill.billed_to}" has been deleted successfully`);
     } catch (err) {
-      alert('Failed to delete bill');
       console.error('Delete bill error:', err);
+      alert(`Failed to delete bill: ${err.message || 'Unknown error'}`);
     }
   };
 
