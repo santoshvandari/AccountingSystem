@@ -166,7 +166,14 @@ const BillsPage = () => {
       }
       setShowModal(false);
     } catch (err) {
-      showToast(`Failed to ${modalMode} bill`, 'error');
+      let errorMsg = `Failed to ${modalMode} bill`;
+      if (err?.data) {
+        if (typeof err.data === 'string') errorMsg += `: ${err.data}`;
+        else if (typeof err.data === 'object') errorMsg += `: ${Object.values(err.data).join(', ')}`;
+      } else if (err?.message) {
+        errorMsg += `: ${err.message}`;
+      }
+      showToast(errorMsg, 'error');
       console.error(`${modalMode} bill error:`, err);
     } finally {
       setSubmitting(false);
