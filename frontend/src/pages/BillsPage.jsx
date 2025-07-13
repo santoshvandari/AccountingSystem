@@ -8,6 +8,8 @@ import InputField from '../components/InputField/InputField';
 import CurrencyInput from '../components/CurrencyInput/CurrencyInput';
 import Loading from '../components/Loading/Loading';
 import Alert from '../components/Alert/Alert';
+import Toast from '../components/Toast/Toast';
+import ConfirmModal from '../components/Modal/ConfirmModal';
 import { billingAPI } from '../api';
 import { formatCurrency } from '../config/currency';
 import { Plus, Edit, Trash2, Eye, Search, Download } from 'lucide-react';
@@ -29,6 +31,9 @@ const BillsPage = () => {
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState({ message: '', type: 'info', visible: false });
+  const [confirmState, setConfirmState] = useState({ open: false, bill: null });
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   useEffect(() => {
     fetchBills();
@@ -87,32 +92,32 @@ const BillsPage = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (bill) => {
-    if (!window.confirm(`Are you sure you want to delete bill #${bill.bill_number || bill.id} for ${bill.billed_to}?`)) {
-      return;
-    }
+  const showToast = (message, type = 'info', duration = 3000) => {
+    setToast({ message, type, visible: true, duration });
+  };
 
+  const handleCloseToast = () => setToast(t => ({ ...t, visible: false }));
+
+  const handleDelete = (bill) => {
+    setConfirmState({ open: true, bill });
+  };
+
+  const handleConfirmDelete = async () => {
+    const bill = confirmState.bill;
+    setConfirmLoading(true);
     try {
       const res = await billingAPI.deleteBill(bill.id);
       if (res.status !== 204) {
         throw new Error('Failed to delete bill');
       }
       setBills(prev => prev.filter(b => b.id !== bill.id));
-      alert(`Bill #${bill.bill_number || bill.id} for "${bill.billed_to}" has been deleted successfully`);
+      showToast(`Bill #${bill.bill_number || bill.id} for "${bill.billed_to}" deleted successfully`, 'success');
     } catch (err) {
+      showToast(`Failed to delete bill: ${err.message || 'Unknown error'}`, 'error');
       console.error('Delete bill error:', err);
-      alert(`Failed to delete bill: ${err.message || 'Unknown error'}`);
-    }
-  };
-
-  const handleDownloadPDF = async (bill) => {
-    try {
-      const response = await billingAPI.getBillPDF(bill.id);
-      // Handle PDF download based on your backend response
-      alert('PDF download initiated');
-    } catch (err) {
-      alert('Failed to download PDF');
-      console.error('Download PDF error:', err);
+    } finally {
+      setConfirmLoading(false);
+      setConfirmState({ open: false, bill: null });
     }
   };
 
@@ -151,17 +156,17 @@ const BillsPage = () => {
       if (modalMode === 'create') {
         const response = await billingAPI.createBill(formData);
         setBills(prev => [response.data, ...prev]);
-        alert('Bill created successfully');
+        showToast('Bill created successfully', 'success');
       } else {
         const response = await billingAPI.updateBill(selectedBill.id, formData);
         setBills(prev => prev.map(b => 
           b.id === selectedBill.id ? response.data : b
         ));
-        alert('Bill updated successfully');
+        showToast('Bill updated successfully', 'success');
       }
       setShowModal(false);
     } catch (err) {
-      alert(`Failed to ${modalMode} bill`);
+      showToast(`Failed to ${modalMode} bill`, 'error');
       console.error(`${modalMode} bill error:`, err);
     } finally {
       setSubmitting(false);
@@ -248,6 +253,26 @@ const BillsPage = () => {
 
   return (
     <DashboardLayout>
+      {/* Toast Notification */}
+      {toast.visible && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={handleCloseToast}
+          duration={toast.duration}
+        />
+      )}
+      {/* Confirm Modal for Delete */}
+      <ConfirmModal
+        isOpen={confirmState.open}
+        title="Delete Bill"
+        message={`Are you sure you want to delete bill #${confirmState.bill?.bill_number || confirmState.bill?.id} for ${confirmState.bill?.billed_to}?`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmState({ open: false, bill: null })}
+        confirmText="Delete"
+        cancelText="Cancel"
+        loading={confirmLoading}
+      />
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
