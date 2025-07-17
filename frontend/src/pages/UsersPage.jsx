@@ -8,6 +8,8 @@ import InputField from '../components/InputField/InputField';
 import Select from '../components/Select/Select';
 import Loading from '../components/Loading/Loading';
 import Alert from '../components/Alert/Alert';
+import Toast from '../components/Toast/Toast';
+import ConfirmModal from '../components/Modal/ConfirmModal';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../api';
 import { Plus, Edit, Trash2, Eye, Search, UserCheck, UserX } from 'lucide-react';
@@ -31,6 +33,15 @@ const UsersPage = () => {
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState({ message: '', type: 'info', visible: false });
+  const [confirmState, setConfirmState] = useState({ open: false, user: null });
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const showToast = (message, type = 'info', duration = 3000) => {
+    setToast({ message, type, visible: true, duration });
+  };
+
+  const handleCloseToast = () => setToast(t => ({ ...t, visible: false }));
 
   const roleOptions = [
     { value: 'admin', label: 'Admin' },
@@ -97,26 +108,28 @@ const UsersPage = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (user) => {
+  const handleDelete = (user) => {
     if (user.email === currentUser.email) {
-      alert('You cannot delete your own account');
+      showToast('You cannot delete your own account', 'error');
       return;
     }
+    setConfirmState({ open: true, user });
+  };
 
-    if (!window.confirm(`Are you sure you want to delete user: ${user.full_name}?`)) {
-      return;
-    }
-
+  const handleConfirmDelete = async () => {
+    const user = confirmState.user;
+    setConfirmLoading(true);
     try {
-      const res=await authAPI.deleteUser(user.email);
-      if(res.status !== 204) {
-        throw new Error('Failed to delete user');
-      }
+      await authAPI.deleteUser(user.email);
       setUsers(prev => prev.filter(u => u.id !== user.id));
-      alert(`User "${user.full_name}" has been deleted successfully`);
+      showToast(`User "${user.full_name}" has been deleted successfully`, 'success');
     } catch (err) {
+      const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
+      showToast(`Failed to delete user: ${errorMessage}`, 'error');
       console.error('Delete user error:', err);
-      alert(`Failed to delete user: ${err.message || 'Unknown error'}`);
+    } finally {
+      setConfirmLoading(false);
+      setConfirmState({ open: false, user: null });
     }
   };
 
@@ -165,14 +178,15 @@ const UsersPage = () => {
       if (modalMode === 'create') {
         const response = await authAPI.register(formData);
         await fetchUsers(); // Refresh the list
-        alert('User created successfully');
+        showToast('User created successfully', 'success');
       } else {
         // For updates, we would need an update endpoint in the backend
-        alert('User update functionality needs backend endpoint');
+        showToast('User update functionality needs backend endpoint', 'warning');
       }
       setShowModal(false);
     } catch (err) {
-      alert(`Failed to ${modalMode} user`);
+      const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
+      showToast(`Failed to ${modalMode} user: ${errorMessage}`, 'error');
       console.error(`${modalMode} user error:`, err);
     } finally {
       setSubmitting(false);
@@ -301,6 +315,28 @@ const UsersPage = () => {
 
   return (
     <DashboardLayout>
+      {/* Toast Notification */}
+      {toast.visible && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={handleCloseToast}
+          duration={toast.duration}
+        />
+      )}
+      
+      {/* Confirm Modal for Delete */}
+      <ConfirmModal
+        isOpen={confirmState.open}
+        title="Delete User"
+        message={`Are you sure you want to delete user: ${confirmState.user?.full_name}?`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmState({ open: false, user: null })}
+        confirmText="Delete"
+        cancelText="Cancel"
+        loading={confirmLoading}
+      />
+      
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">

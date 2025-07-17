@@ -8,6 +8,8 @@ import InputField from '../components/InputField/InputField';
 import CurrencyInput from '../components/CurrencyInput/CurrencyInput';
 import Loading from '../components/Loading/Loading';
 import Alert from '../components/Alert/Alert';
+import Toast from '../components/Toast/Toast';
+import ConfirmModal from '../components/Modal/ConfirmModal';
 import { transactionAPI } from '../api';
 import { formatCurrency } from '../config/currency';
 import { Plus, Edit, Trash2, Eye, Search } from 'lucide-react';
@@ -28,6 +30,9 @@ const TransactionsPage = () => {
     });
     const [formErrors, setFormErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
+    const [toast, setToast] = useState({ message: '', type: 'info', visible: false });
+    const [confirmState, setConfirmState] = useState({ open: false, transaction: null });
+    const [confirmLoading, setConfirmLoading] = useState(false);
 
     useEffect(() => {
         fetchTransactions();
@@ -79,21 +84,29 @@ const TransactionsPage = () => {
         setShowModal(true);
     };
 
-    const handleDelete = async (transaction) => {
-        if (!window.confirm(`Are you sure you want to delete this transaction from ${transaction.received_from}?`)) {
-            return;
-        }
+    const showToast = (message, type = 'info', duration = 3000) => {
+        setToast({ message, type, visible: true, duration });
+    };
 
+    const handleCloseToast = () => setToast(t => ({ ...t, visible: false }));
+
+    const handleDelete = (transaction) => {
+        setConfirmState({ open: true, transaction });
+    };
+
+    const handleConfirmDelete = async () => {
+        const transaction = confirmState.transaction;
+        setConfirmLoading(true);
         try {
-            const res = await transactionAPI.deleteTransaction(transaction.id);
-            if (res.status !== 204) {
-                throw new Error('Failed to delete transaction');
-            }
+            await transactionAPI.deleteTransaction(transaction.id);
             setTransactions(prev => prev.filter(t => t.id !== transaction.id));
-            alert(`Transaction from "${transaction.received_from}" has been deleted successfully`);
+            showToast(`Transaction from "${transaction.received_from || 'Unknown'}" deleted successfully`, 'success');
         } catch (err) {
+            showToast(`Failed to delete transaction: ${err.message || 'Unknown error'}`, 'error');
             console.error('Delete transaction error:', err);
-            alert(`Failed to delete transaction: ${err.message || 'Unknown error'}`);
+        } finally {
+            setConfirmLoading(false);
+            setConfirmState({ open: false, transaction: null });
         }
     };
 
@@ -128,17 +141,17 @@ const TransactionsPage = () => {
             if (modalMode === 'create') {
                 const response = await transactionAPI.createTransaction(formData);
                 setTransactions(prev => [response.data, ...prev]);
-                alert('Transaction created successfully');
+                showToast('Transaction created successfully', 'success');
             } else {
                 const response = await transactionAPI.updateTransaction(selectedTransaction.id, formData);
                 setTransactions(prev => prev.map(t =>
                     t.id === selectedTransaction.id ? response.data : t
                 ));
-                alert('Transaction updated successfully');
+                showToast('Transaction updated successfully', 'success');
             }
             setShowModal(false);
         } catch (err) {
-            alert(`Failed to ${modalMode} transaction`);
+            showToast(`Failed to ${modalMode} transaction`, 'error');
             console.error(`${modalMode} transaction error:`, err);
         } finally {
             setSubmitting(false);
@@ -154,8 +167,8 @@ const TransactionsPage = () => {
     };
 
     const filteredTransactions = transactions.filter(transaction =>
-        transaction.received_from.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.note?.toLowerCase().includes(searchTerm.toLowerCase())
+        (transaction.received_from || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (transaction.note || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const columns = [
@@ -212,6 +225,26 @@ const TransactionsPage = () => {
 
     return (
         <DashboardLayout>
+            {/* Toast Notification */}
+            {toast.visible && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={handleCloseToast}
+                    duration={toast.duration}
+                />
+            )}
+            {/* Confirm Modal for Delete */}
+            <ConfirmModal
+                isOpen={confirmState.open}
+                title="Delete Transaction"
+                message={`Are you sure you want to delete this transaction from ${confirmState.transaction?.received_from}?`}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setConfirmState({ open: false, transaction: null })}
+                confirmText="Delete"
+                cancelText="Cancel"
+                loading={confirmLoading}
+            />
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
