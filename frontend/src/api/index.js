@@ -6,6 +6,7 @@ export const authAPI = {
   register: (userData) => Base.post('/accounts/register/', userData),
   getProfile: () => Base.get('/accounts/profile/'),
   updateProfile: (data) => Base.put('/accounts/update-profile/', data),
+  updateUser: (data) => Base.put('/accounts/update-user/', data),
   changePassword: (data) => Base.post('/accounts/change-password/', data),
   deleteUser: (email) => Base.delete(`/accounts/delete-user/`, { email }),
   getUsers: () => Base.get('/accounts/user/'),
