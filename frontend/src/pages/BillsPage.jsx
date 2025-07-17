@@ -106,18 +106,16 @@ const BillsPage = () => {
     const bill = confirmState.bill;
     setConfirmLoading(true);
     try {
-      const res = await billingAPI.deleteBill(bill.id);
-      if (res.status !== 204) {
-        throw new Error('Failed to delete bill');
-      }
-      setBills(prev => prev.filter(b => b.id !== bill.id));
-      showToast(`Bill #${bill.bill_number || bill.id} for "${bill.billed_to}" deleted successfully`, 'success');
+        await billingAPI.deleteBill(bill.id);
+        setBills(prev => prev.filter(b => b.id !== bill.id));
+        showToast(`Bill #${bill.bill_number || bill.id} for "${bill.billed_to || 'Unknown'}" deleted successfully`, 'success');
     } catch (err) {
-      showToast(`Failed to delete bill: ${err.message || 'Unknown error'}`, 'error');
-      console.error('Delete bill error:', err);
+        const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
+        showToast(`Failed to delete bill: ${errorMessage}`, 'error');
+        console.error('Delete bill error:', err);
     } finally {
-      setConfirmLoading(false);
-      setConfirmState({ open: false, bill: null });
+        setConfirmLoading(false);
+        setConfirmState({ open: false, bill: null });
     }
   };
 

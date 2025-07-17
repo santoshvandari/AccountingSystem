@@ -98,12 +98,9 @@ const TransactionsPage = () => {
         const transaction = confirmState.transaction;
         setConfirmLoading(true);
         try {
-            const res = await transactionAPI.deleteTransaction(transaction.id);
-            if (res.status !== 204) {
-                throw new Error('Failed to delete transaction');
-            }
+            await transactionAPI.deleteTransaction(transaction.id);
             setTransactions(prev => prev.filter(t => t.id !== transaction.id));
-            showToast(`Transaction from "${transaction.received_from}" deleted successfully`, 'success');
+            showToast(`Transaction from "${transaction.received_from || 'Unknown'}" deleted successfully`, 'success');
         } catch (err) {
             showToast(`Failed to delete transaction: ${err.message || 'Unknown error'}`, 'error');
             console.error('Delete transaction error:', err);
@@ -170,8 +167,8 @@ const TransactionsPage = () => {
     };
 
     const filteredTransactions = transactions.filter(transaction =>
-        transaction.received_from.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.note?.toLowerCase().includes(searchTerm.toLowerCase())
+        (transaction.received_from || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (transaction.note || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const columns = [
