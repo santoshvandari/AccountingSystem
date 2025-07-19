@@ -92,6 +92,7 @@ const Base = {
         });
     },
 
+// Removed the `downloadFile` method as it is unused and unnecessary.
     /**
      * Send a POST request
      * @param {string} endpoint - API endpoint

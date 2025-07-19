@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
 import DashboardLayout from '../components/Layout/DashboardLayout';
 import Card from '../components/Card/Card';
 import Button from '../components/Button/Button';
@@ -12,7 +13,7 @@ import Toast from '../components/Toast/Toast';
 import ConfirmModal from '../components/Modal/ConfirmModal';
 import { billingAPI } from '../api';
 import { formatCurrency } from '../config/currency';
-import { Plus, Edit, Trash2, Eye, Search, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Search, Download, Printer } from 'lucide-react';
 
 const BillsPage = () => {
   const [bills, setBills] = useState([]);
@@ -34,6 +35,7 @@ const BillsPage = () => {
   const [toast, setToast] = useState({ message: '', type: 'info', visible: false });
   const [confirmState, setConfirmState] = useState({ open: false, bill: null });
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [successModal, setSuccessModal] = useState({ open: false, bill: null });
 
   useEffect(() => {
     fetchBills();
@@ -102,6 +104,300 @@ const BillsPage = () => {
     setConfirmState({ open: true, bill });
   };
 
+  const handleDownloadPDF = async (bill) => {
+    try {
+      showToast('Generating PDF...', 'info');
+      
+      // Create new jsPDF instance
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      
+      // Set up colors
+      const primaryColor = [37, 99, 235]; // Blue
+      const textColor = [31, 41, 55]; // Gray-800
+      const lightGray = [243, 244, 246]; // Gray-100
+      
+      // Header
+      pdf.setFillColor(...primaryColor);
+      pdf.rect(0, 0, pageWidth, 40, 'F');
+      
+      // Company/Invoice title
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('INVOICE', pageWidth / 2, 20, { align: 'center' });
+      
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Bill #${bill.bill_number}`, pageWidth / 2, 30, { align: 'center' });
+      
+      // Reset text color for body
+      pdf.setTextColor(...textColor);
+      
+      // Bill details section
+      let yPosition = 60;
+      
+      // Bill To and Date section
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Bill To:', 20, yPosition);
+      pdf.text('Issue Date:', pageWidth - 70, yPosition);
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(bill.billed_to, 20, yPosition + 10);
+      pdf.text(new Date(bill.issued_at).toLocaleDateString(), pageWidth - 70, yPosition + 10);
+      
+      // Amount section
+      yPosition += 40;
+      
+      // Draw amount box
+      pdf.setFillColor(...lightGray);
+      pdf.rect(20, yPosition, pageWidth - 40, 30, 'F');
+      
+      // Amount label and value
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Amount Due:', 30, yPosition + 15);
+      
+      pdf.setFontSize(18);
+      pdf.setTextColor(...primaryColor);
+      pdf.text(formatCurrency(bill.amount), pageWidth - 30, yPosition + 15, { align: 'right' });
+      
+      // Reset color
+      pdf.setTextColor(...textColor);
+      
+      // Note section (if exists)
+      if (bill.note) {
+        yPosition += 50;
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Note:', 20, yPosition);
+        
+        pdf.setFont('helvetica', 'normal');
+        // Handle long notes by splitting into lines
+        const noteLines = pdf.splitTextToSize(bill.note, pageWidth - 40);
+        pdf.text(noteLines, 20, yPosition + 10);
+        yPosition += (noteLines.length * 5) + 10;
+      }
+      
+      // Footer
+      const footerY = pageHeight - 40;
+      pdf.setDrawColor(200, 200, 200);
+      pdf.line(20, footerY, pageWidth - 20, footerY);
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(107, 114, 128); // Gray-500
+      pdf.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, footerY + 10, { align: 'center' });
+      pdf.text('Thank you for your business!', pageWidth / 2, footerY + 20, { align: 'center' });
+      
+      // Save the PDF
+      pdf.save(`bill-${bill.bill_number}.pdf`);
+      
+      showToast(`PDF downloaded successfully for bill #${bill.bill_number}`, 'success');
+    } catch (err) {
+      showToast('Failed to generate PDF. Please try again.', 'error');
+      console.error('PDF generation error:', err);
+    }
+  };
+
+  const handlePrint = (bill) => {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    
+    // Get current date for the print
+    const currentDate = new Date().toLocaleDateString();
+    const issueDate = new Date(bill.issued_at).toLocaleDateString();
+    
+    // Create the HTML content for printing
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Bill #${bill.bill_number}</title>
+          <meta charset="UTF-8">
+          <style>
+            body {
+              font-family: 'Arial', sans-serif;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+              color: #1f2937;
+              line-height: 1.6;
+            }
+            .header {
+              background: linear-gradient(135deg, #2563eb, #1d4ed8);
+              color: white;
+              text-align: center;
+              padding: 30px 20px;
+              margin: -20px -20px 30px -20px;
+              border-radius: 0;
+            }
+            .header h1 {
+              margin: 0 0 10px 0;
+              font-size: 28px;
+              font-weight: bold;
+              letter-spacing: 2px;
+            }
+            .header h2 {
+              margin: 0;
+              font-size: 18px;
+              font-weight: normal;
+              opacity: 0.9;
+            }
+            .bill-info {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 30px;
+              background: #f8f9fa;
+              padding: 20px;
+              border-radius: 8px;
+            }
+            .bill-info div {
+              flex: 1;
+            }
+            .bill-info h3 {
+              margin: 0 0 10px 0;
+              color: #2563eb;
+              font-size: 14px;
+              font-weight: bold;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .bill-info p {
+              margin: 0;
+              font-size: 16px;
+              font-weight: 500;
+            }
+            .amount-section {
+              background: #f1f5f9;
+              padding: 25px;
+              border-radius: 12px;
+              margin-bottom: 30px;
+              border: 2px solid #e2e8f0;
+            }
+            .amount-container {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            .amount-label {
+              font-size: 16px;
+              font-weight: 600;
+              color: #475569;
+            }
+            .amount {
+              font-size: 32px;
+              font-weight: bold;
+              color: #2563eb;
+            }
+            .note {
+              background: #fef3c7;
+              padding: 20px;
+              border-radius: 8px;
+              border-left: 4px solid #f59e0b;
+              margin-bottom: 30px;
+            }
+            .note h4 {
+              margin: 0 0 10px 0;
+              color: #92400e;
+              font-size: 16px;
+            }
+            .note p {
+              margin: 0;
+              color: #78350f;
+              line-height: 1.5;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 50px;
+              padding-top: 20px;
+              border-top: 2px solid #e5e7eb;
+              color: #6b7280;
+            }
+            .footer p {
+              margin: 5px 0;
+            }
+            .company-info {
+              margin-top: 20px;
+              font-style: italic;
+              color: #9ca3af;
+            }
+            @media print {
+              body { 
+                margin: 0; 
+                padding: 15px;
+              }
+              .header {
+                margin: -15px -15px 20px -15px;
+              }
+              .no-print { 
+                display: none; 
+              }
+            }
+            @page {
+              margin: 0.5in;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>INVOICE</h1>
+            <h2>Bill #${bill.bill_number}</h2>
+          </div>
+          
+          <div class="bill-info">
+            <div>
+              <h3>Bill To</h3>
+              <p>${bill.billed_to}</p>
+            </div>
+            <div>
+              <h3>Issue Date</h3>
+              <p>${issueDate}</p>
+            </div>
+          </div>
+          
+          <div class="amount-section">
+            <div class="amount-container">
+              <span class="amount-label">Amount Due:</span>
+              <span class="amount">${formatCurrency(bill.amount)}</span>
+            </div>
+          </div>
+          
+          ${bill.note ? `
+            <div class="note">
+              <h4>Additional Notes:</h4>
+              <p>${bill.note}</p>
+            </div>
+          ` : ''}
+          
+          <div class="footer">
+            <p><strong>Generated on ${currentDate}</strong></p>
+            <p>Thank you for your business!</p>
+            <div class="company-info">
+              <p>This is a computer-generated invoice.</p>
+            </div>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              setTimeout(() => {
+                window.print();
+                window.onafterprint = function() {
+                  window.close();
+                };
+              }, 100);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+    
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  };
+
   const handleConfirmDelete = async () => {
     const bill = confirmState.bill;
     setConfirmLoading(true);
@@ -154,15 +450,21 @@ const BillsPage = () => {
       if (modalMode === 'create') {
         const response = await billingAPI.createBill(formData);
         setBills(prev => [response.data, ...prev]);
+        setShowModal(false);
+        
+        // Show success toast
         showToast('Bill created successfully', 'success');
+        
+        // Show success modal with print/download options
+        setSuccessModal({ open: true, bill: response.data });
       } else {
         const response = await billingAPI.updateBill(selectedBill.id, formData);
         setBills(prev => prev.map(b => 
           b.id === selectedBill.id ? response.data : b
         ));
         showToast('Bill updated successfully', 'success');
+        setShowModal(false);
       }
-      setShowModal(false);
     } catch (err) {
       let errorMsg = `Failed to ${modalMode} bill`;
       if (err?.data) {
@@ -238,6 +540,14 @@ const BillsPage = () => {
           <Button
             size="sm"
             variant="ghost"
+            onClick={() => handlePrint(bill)}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            <Printer className="w-4 h-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={() => handleDownloadPDF(bill)}
             className="text-green-600 hover:text-green-800"
           >
@@ -278,6 +588,68 @@ const BillsPage = () => {
         cancelText="Cancel"
         loading={confirmLoading}
       />
+
+      {/* Success Modal for Bill Creation */}
+      <Modal
+        isOpen={successModal.open}
+        onClose={() => setSuccessModal({ open: false, bill: null })}
+        title="Bill Created Successfully!"
+      >
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+              <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Bill #{successModal.bill?.bill_number} has been created successfully!
+            </h3>
+            <p className="text-sm text-gray-500">
+              For {successModal.bill?.billed_to} • {formatCurrency(successModal.bill?.amount || 0)}
+            </p>
+          </div>
+          
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 text-center">
+              Would you like to print or download this bill now?
+            </p>
+            
+            <div className="flex space-x-3">
+              <Button
+                onClick={() => {
+                  handlePrint(successModal.bill);
+                  setSuccessModal({ open: false, bill: null });
+                }}
+                className="flex-1"
+                variant="outline"
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Print Now
+              </Button>
+              <Button
+                onClick={() => {
+                  handleDownloadPDF(successModal.bill);
+                  setSuccessModal({ open: false, bill: null });
+                }}
+                className="flex-1"
+                variant="outline"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download PDF
+              </Button>
+            </div>
+            
+            <Button
+              onClick={() => setSuccessModal({ open: false, bill: null })}
+              variant="ghost"
+              className="w-full"
+            >
+              Maybe Later
+            </Button>
+          </div>
+        </div>
+      </Modal>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -369,7 +741,15 @@ const BillsPage = () => {
                 <label className="block text-sm font-medium text-gray-700">Note</label>
                 <p className="mt-1 text-sm text-gray-900">{selectedBill?.note || 'No note provided'}</p>
               </div>
-              <div className="pt-4">
+              <div className="pt-4 space-y-3">
+                <Button
+                  onClick={() => handlePrint(selectedBill)}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  Print Bill
+                </Button>
                 <Button
                   onClick={() => handleDownloadPDF(selectedBill)}
                   variant="outline"

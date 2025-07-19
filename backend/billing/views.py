@@ -46,13 +46,14 @@ class BillUpdateView(APIView):
         return Response(serializer.data)
 
 
-class BillPDFView(APIView):
-    permission_classes=[permissions.IsAuthenticated]
-    def get(self, request, id):
-        try:
-            bill = Bill.objects.get(id=id)
-        except Bill.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        
-        serializer = BillPDFSerializer(bill)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+# PDF generation is now handled in frontend
+# class BillPDFView(APIView):
+#     permission_classes=[permissions.IsAuthenticated]
+#     def get(self, request, id):
+#         try:
+#             bill = Bill.objects.get(id=id)
+#         except Bill.DoesNotExist:
+#             return Response(status=status.HTTP_404_NOT_FOUND)
+#         
+#         serializer = BillPDFSerializer(bill)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
