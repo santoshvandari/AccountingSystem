@@ -20,7 +20,11 @@ def get_deleted_user():
 class Bill(models.Model):
     bill_number = models.CharField(max_length=20, unique=True)
     billed_to = models.CharField(max_length=100)  # Customer name
+    # We need to add a field to track for what services the bill is issued and my be it is the list
+    # billed_for = models.TextField()  # Description of services or products
     amount = models.DecimalField(max_digits=12, decimal_places=2)
+    # # let's write the total amount of the bill and calculate it from the amount
+    # total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     note = models.TextField(blank=True, null=True)
     issued_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), related_name="bills_issued")
     issued_at = models.DateTimeField(default=timezone.now)
