@@ -92,42 +92,7 @@ const Base = {
         });
     },
 
-    /**
-     * Send a GET request for downloading files (returns blob)
-     * @param {string} endpoint - API endpoint
-     * @returns {Promise} Promise with blob response
-     */
-    downloadFile: async (endpoint) => {
-        const url = `${API_BASE_URL}${endpoint}`;
-        const token = getAccessToken();
-        
-        try {
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Authorization': token ? `Bearer ${token}` : undefined
-                }
-            });
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    clearAccessToken();
-                }
-                throw new Error(`Download failed: ${response.status} ${response.statusText}`);
-            }
-
-            const blob = await response.blob();
-            return {
-                status: response.status,
-                data: blob,
-                headers: response.headers
-            };
-        } catch (error) {
-            console.error('Download error:', error);
-            throw error;
-        }
-    },
-
+// Removed the `downloadFile` method as it is unused and unnecessary.
     /**
      * Send a POST request
      * @param {string} endpoint - API endpoint
