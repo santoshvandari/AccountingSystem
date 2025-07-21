@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework import permissions
 from transactions.serializer import CreateTransactionSerializer, GetTransactionSerializer, GetTransactionSummarySerializer,UpdateTransactionSerializer
 from transactions.models import Transaction
+from core.permissions import IsSuperUserOnly
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q,Sum
@@ -40,7 +41,7 @@ class CreateTransaction(APIView):
     
 
 class UpdateTransaction(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsSuperUserOnly]  # Only superusers can update transactions
 
     def put(self, request, transaction_id=None):
         if not transaction_id:
@@ -70,11 +71,11 @@ class GetTransactionDetail(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class DeleteTransaction(APIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperUserOnly]  # Only superusers can delete transactions
 
     def delete(self, request, transaction_id=None):
         """
-        Delete a transaction by its ID. Only accessible by admin users.
+        Delete a transaction by its ID. Only accessible by superusers.
         """
         if not transaction_id:
             return Response({"error": "Transaction ID is required"}, status=status.HTTP_400_BAD_REQUEST)

@@ -4,6 +4,7 @@ from rest_framework import status
 from billing.models import Bill
 from billing.serializers import BillPDFSerializer, GetBillSerializer, PostBillSerializer
 from rest_framework import permissions
+from core.permissions import IsSuperUserOnly
 
 # Create your views here.
 class BillListCreateView(APIView):
@@ -33,7 +34,7 @@ class BillDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class BillUpdateView(APIView):
-    permission_classes=[permissions.IsAuthenticated]
+    permission_classes=[IsSuperUserOnly]  # Only superusers can update bills
     def put(self, request, id):
         try:
             bill = Bill.objects.get(id=id)
@@ -44,6 +45,21 @@ class BillUpdateView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class BillDeleteView(APIView):
+    permission_classes=[IsSuperUserOnly]  # Only superusers can delete bills
+    def delete(self, request, id):
+        """
+        Delete a bill by its ID. Only accessible by superusers.
+        """
+        try:
+            bill = Bill.objects.get(id=id)
+        except Bill.DoesNotExist:
+            return Response({"error": "Bill not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        bill.delete()
+        return Response({"message": "Bill deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 
 # PDF generation is now handled in frontend

@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
 from accounts.serializers import ChangePasswordSerializer, UserSerializer,LoginSerializer,ProfileViewSerializer
+from core.permissions import IsSuperUserOnly, CanManageUsers
 
 from django.contrib.auth import authenticate
 from accounts.utils import get_tokens_for_user
@@ -36,11 +37,31 @@ class RegisterView(APIView):
     """
     Handles user registration and updates.
     """
-    permission_classes = [permissions.IsAdminUser] # Only admin can register new users
+    permission_classes = [CanManageUsers] # Role-based user management permissions
     def post(self, request):
         """
         Registers a new user.
         """
+        # Get the role of the user being created
+        target_role = request.data.get('role', '').lower()
+        
+        # Define role hierarchy: admin > manager > cashier
+        role_hierarchy = {
+            'admin': 3,
+            'manager': 2,
+            'cashier': 1
+        }
+        
+        user_level = role_hierarchy.get(request.user.role, 0)
+        target_level = role_hierarchy.get(target_role, 0)
+        
+        # Managers can only create users below their level
+        if request.user.role == 'manager' and target_level >= user_level:
+            return Response(
+                {"error": "Managers can only create cashier accounts or users below their level"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             try:
@@ -52,16 +73,44 @@ class RegisterView(APIView):
 
 # Update the user information
 class UpdateUserView(APIView):
-    permission_classes = [permissions.IsAuthenticated]  # Only authenticated users can update their information   
+    permission_classes = [CanManageUsers]  # Role-based user management permissions   
     def put(self, request):
         """
-        Updates the current user's information.
+        Updates user information based on role hierarchy.
         """
         email = request.data.get('email')
         if not email:
             return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
         try:
             user = User.objects.get(email=email)
+            
+            # Check if current user can manage the target user
+            permission = CanManageUsers()
+            if not permission.has_object_permission(request, self, user):
+                return Response(
+                    {"error": "You don't have permission to update this user"}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # If updating role, check hierarchy
+            if 'role' in request.data:
+                target_role = request.data.get('role', '').lower()
+                role_hierarchy = {
+                    'admin': 3,
+                    'manager': 2,
+                    'cashier': 1
+                }
+                
+                user_level = role_hierarchy.get(request.user.role, 0)
+                target_level = role_hierarchy.get(target_role, 0)
+                
+                # Managers can only assign roles below their level
+                if request.user.role == 'manager' and target_level >= user_level:
+                    return Response(
+                        {"error": "Managers can only assign roles below their level"}, 
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            
             serializer = UserSerializer(user, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -72,10 +121,10 @@ class UpdateUserView(APIView):
 
 # Delete the user account
 class DeleteUserView(APIView):
-    permission_classes = [permissions.IsAdminUser]  # Only authenticated users can delete their account       
+    permission_classes = [IsSuperUserOnly]  # Only superusers can delete users       
     def delete(self, request):
         """
-        Deletes the current user.
+        Deletes a user. Only accessible by superusers.
         """
         user_email = request.data.get('email')
         if not user_email:
