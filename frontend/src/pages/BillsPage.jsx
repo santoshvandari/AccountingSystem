@@ -597,7 +597,7 @@ const BillsPage = () => {
           ` : ''}
           
           <div class="footer">
-            <p><strong>Thank you for business with us!</strong></p>
+            <p><strong>Thank you for your patience with us!</strong></p>
             <p>Generated on ${currentDate}</p>
           </div>
           
@@ -960,7 +960,7 @@ const BillsPage = () => {
             modalMode === 'edit' ? 'Edit Invoice' :
             'Invoice Details'
           }
-          size="2xl"
+          size="lg"
         >
           {modalMode === 'view' ? (
             <div className="space-y-6">
