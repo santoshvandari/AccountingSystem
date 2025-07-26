@@ -43,9 +43,9 @@ class BillListCreateView(APIView):
     
     def generate_bill_number(self):
         """Generate a unique bill number"""
-        import time
-        timestamp = str(int(time.time()))[-6:]  # Last 6 digits of timestamp
-        return f"INV-{timestamp}"
+        import uuid
+        return f"INV-{uuid.uuid4().hex[:6].upper()}"
+
 
 
 class BillDetailView(APIView):
