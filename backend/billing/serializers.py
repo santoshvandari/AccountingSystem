@@ -19,10 +19,30 @@ class BillItemSerializer(ModelSerializer):
         fields = ['id', 'description', 'quantity', 'unit_price', 'total', 'unit', 'notes']
         read_only_fields = ['id', 'total']
 
+    def validate_unit_price(self, value):
+        """Handle currency formatting and validate unit price"""
+        if isinstance(value, str):
+            # Remove currency formatting (commas, spaces)
+            cleaned_value = value.replace(',', '').replace(' ', '').strip()
+            try:
+                return float(cleaned_value)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError("A valid number is required.")
+        return value
+
+    def validate_quantity(self, value):
+        """Validate quantity"""
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError("A valid number is required.")
+        return value
+
     def validate(self, data):
         """Calculate total automatically"""
-        quantity = data.get('quantity', 1)
-        unit_price = data.get('unit_price', 0)
+        quantity = float(data.get('quantity', 1))
+        unit_price = float(data.get('unit_price', 0))
         data['total'] = quantity * unit_price
         return data
 
@@ -57,13 +77,16 @@ class PostBillSerializer(ModelSerializer):
 
     def create(self, validated_data):
         bill_items_data = validated_data.pop('bill_items')
+        
+        # Create the bill first
         bill = Bill.objects.create(**validated_data)
         
+        # Create bill items after the bill is saved
         for item_data in bill_items_data:
             BillItem.objects.create(bill=bill, **item_data)
         
-        # Recalculate totals after creating all items
-        bill.save()
+        # Refresh the bill to get updated totals
+        bill.refresh_from_db()
         return bill
 
     def update(self, instance, validated_data):
@@ -84,6 +107,7 @@ class PostBillSerializer(ModelSerializer):
         
         # Save and recalculate totals
         instance.save()
+        instance.refresh_from_db()
         return instance
 
 

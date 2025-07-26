@@ -18,22 +18,28 @@ class BillListCreateView(APIView):
 
     def post(self, request):
         try:
-            # Generate unique bill number if not provided
-            if not request.data.get('bill_number'):
-                request.data['bill_number'] = self.generate_bill_number()
+            # Make a copy of the request data to avoid modifying the original
+            data = request.data.copy()
+            
+            # Generate unique bill number if not provided or empty
+            if not data.get('bill_number') or not data.get('bill_number').strip():
+                data['bill_number'] = self.generate_bill_number()
             
             # Set the issued_by field to the current user
-            request.data['issued_by'] = request.user.id
+            data['issued_by'] = request.user.id
             
             with transaction.atomic():
-                serializer = PostBillSerializer(data=request.data)
+                serializer = PostBillSerializer(data=data)
                 if serializer.is_valid():
                     bill = serializer.save()
                     # Return the created bill with all details
                     response_serializer = GetBillSerializer(bill)
                     return Response(response_serializer.data, status=status.HTTP_201_CREATED)
                 else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({
+                        "error": "Validation failed",
+                        "details": serializer.errors
+                    }, status=status.HTTP_400_BAD_REQUEST)
                     
         except Exception as e:
             return Response(
@@ -44,7 +50,25 @@ class BillListCreateView(APIView):
     def generate_bill_number(self):
         """Generate a unique bill number"""
         import uuid
-        return f"INV-{uuid.uuid4().hex[:6].upper()}"
+        from datetime import datetime
+        
+        # Try to make a unique number with date + random
+        date_part = datetime.now().strftime("%y%m%d")
+        random_part = uuid.uuid4().hex[:4].upper()
+        bill_number = f"INV-{date_part}{random_part}"
+        
+        # Check if this number already exists, if so generate a new one
+        counter = 1
+        original_bill_number = bill_number
+        while Bill.objects.filter(bill_number=bill_number).exists():
+            bill_number = f"{original_bill_number}-{counter}"
+            counter += 1
+            # Safety break to avoid infinite loop
+            if counter > 100:
+                bill_number = f"INV-{uuid.uuid4().hex[:8].upper()}"
+                break
+                
+        return bill_number
 
 
 

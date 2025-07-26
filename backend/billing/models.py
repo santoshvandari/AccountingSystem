@@ -68,17 +68,23 @@ class Bill(models.Model):
         # Calculate discount
         if self.discount_percentage > 0:
             self.discount_amount = (self.subtotal * self.discount_percentage) / 100
+        else:
+            self.discount_amount = 0
         
         # Calculate tax on discounted amount
         taxable_amount = self.subtotal - self.discount_amount
         if self.tax_percentage > 0:
             self.tax_amount = (taxable_amount * self.tax_percentage) / 100
+        else:
+            self.tax_amount = 0
         
         # Calculate total
         self.total_amount = self.subtotal - self.discount_amount + self.tax_amount
         
     def save(self, *args, **kwargs):
-        self.calculate_totals()
+        # Only calculate totals if the bill has been saved (has pk) and has items
+        if self.pk:
+            self.calculate_totals()
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -107,9 +113,24 @@ class BillItem(models.Model):
         self.total = self.quantity * self.unit_price
         super().save(*args, **kwargs)
         
-        # Update bill totals
-        if self.bill_id:
-            self.bill.save()
+        # Update bill totals if bill exists and is saved
+        if self.bill_id and self.bill.pk:
+            from django.db.models import Sum
+            # Use update to avoid recursion
+            Bill.objects.filter(pk=self.bill.pk).update(
+                subtotal=self.bill.bill_items.aggregate(
+                    total=Sum('total')
+                )['total'] or 0
+            )
+            # Recalculate and save the bill
+            self.bill.refresh_from_db()
+            self.bill.calculate_totals()
+            Bill.objects.filter(pk=self.bill.pk).update(
+                subtotal=self.bill.subtotal,
+                tax_amount=self.bill.tax_amount,
+                discount_amount=self.bill.discount_amount,
+                total_amount=self.bill.total_amount
+            )
     
     def __str__(self):
         return f"{self.description} - {self.quantity} x Rs.{self.unit_price}"

@@ -27,7 +27,7 @@ export const billingAPI = {
   createBill: (data) => Base.post('/bills/', data),
   getBillDetail: (id) => Base.get(`/bills/${id}/`),
   updateBill: (id, data) => Base.put(`/bills/${id}/update/`, data),
-  deleteBill: (id) => Base.delete(`/bills/${id}/`),
+  deleteBill: (id) => Base.delete(`/bills/${id}/delete/`),
 };
 
 export default {
