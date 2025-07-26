@@ -1,5 +1,6 @@
 from rest_framework.serializers import ModelSerializer
-from billing.models import Bill
+from rest_framework import serializers
+from billing.models import Bill, BillItem
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -11,21 +12,91 @@ class UserSerializer(ModelSerializer):
         fields = ["full_name", 'username', 'email']
         read_only_fields = ['id', 'username', 'email']
 
+
+class BillItemSerializer(ModelSerializer):
+    class Meta:
+        model = BillItem
+        fields = ['id', 'description', 'quantity', 'unit_price', 'total', 'unit', 'notes']
+        read_only_fields = ['id', 'total']
+
+    def validate(self, data):
+        """Calculate total automatically"""
+        quantity = data.get('quantity', 1)
+        unit_price = data.get('unit_price', 0)
+        data['total'] = quantity * unit_price
+        return data
+
+
 class GetBillSerializer(ModelSerializer):
     issued_by = UserSerializer(read_only=True)
+    bill_items = BillItemSerializer(many=True, read_only=True)
+    
     class Meta:
         model = Bill
-        fields = "__all__"
+        fields = [
+            'id', 'bill_number', 'billed_to', 'customer_address', 'customer_phone', 
+            'customer_email', 'subtotal', 'tax_percentage', 'tax_amount', 
+            'discount_percentage', 'discount_amount', 'total_amount', 
+            'payment_method', 'payment_details', 'note', 'issued_by', 
+            'issued_at', 'created_at', 'updated_at', 'bill_items'
+        ]
+
 
 class PostBillSerializer(ModelSerializer):
-    issued_by = UserSerializer(read_only=True)
+    bill_items = BillItemSerializer(many=True)
+    
     class Meta:
         model = Bill
-        fields = '__all__'
+        fields = [
+            'bill_number', 'billed_to', 'customer_address', 'customer_phone', 
+            'customer_email', 'tax_percentage', 'discount_percentage', 
+            'payment_method', 'payment_details', 'note', 'issued_by', 
+            'bill_items'
+        ]
+        read_only_fields = ['subtotal', 'tax_amount', 'discount_amount', 'total_amount']
+
+    def create(self, validated_data):
+        bill_items_data = validated_data.pop('bill_items')
+        bill = Bill.objects.create(**validated_data)
+        
+        for item_data in bill_items_data:
+            BillItem.objects.create(bill=bill, **item_data)
+        
+        # Recalculate totals after creating all items
+        bill.save()
+        return bill
+
+    def update(self, instance, validated_data):
+        bill_items_data = validated_data.pop('bill_items', None)
+        
+        # Update bill fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Handle bill items update
+        if bill_items_data is not None:
+            # Delete existing items
+            instance.bill_items.all().delete()
+            
+            # Create new items
+            for item_data in bill_items_data:
+                BillItem.objects.create(bill=instance, **item_data)
+        
+        # Save and recalculate totals
+        instance.save()
+        return instance
 
 
 class BillPDFSerializer(ModelSerializer):
+    bill_items = BillItemSerializer(many=True, read_only=True)
+    issued_by = UserSerializer(read_only=True)
+    
     class Meta:
         model = Bill
-        fields = ['id', 'amount', 'date', 'customer_name', 'description']
-        read_only_fields = ['id', 'amount', 'date', 'customer_name', 'description']
+        fields = [
+            'id', 'bill_number', 'billed_to', 'customer_address', 'customer_phone',
+            'customer_email', 'subtotal', 'tax_percentage', 'tax_amount',
+            'discount_percentage', 'discount_amount', 'total_amount',
+            'payment_method', 'payment_details', 'note', 'issued_by',
+            'issued_at', 'bill_items'
+        ]

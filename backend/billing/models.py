@@ -19,13 +19,6 @@ def get_deleted_user():
     )[0]
 
 class Bill(models.Model):
-    PAYMENT_STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('paid', 'Paid'),
-        ('overdue', 'Overdue'),
-        ('cancelled', 'Cancelled'),
-    ]
-    
     PAYMENT_METHOD_CHOICES = [
         ('cash', 'Cash'),
         ('bank_transfer', 'Bank Transfer'),
@@ -52,16 +45,11 @@ class Bill(models.Model):
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     
     # Payment Information
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, blank=True, null=True)
     payment_details = models.TextField(blank=True, null=True)  # Additional payment info
     
-    # Due date for payment
-    due_date = models.DateField(blank=True, null=True)
-    
     # General notes
     note = models.TextField(blank=True, null=True)
-    terms_and_conditions = models.TextField(blank=True, null=True)
     
     # Meta information
     issued_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), related_name="bills_issued")
