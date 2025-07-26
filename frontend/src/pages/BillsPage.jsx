@@ -13,7 +13,7 @@ import Toast from '../components/Toast/Toast';
 import ConfirmModal from '../components/Modal/ConfirmModal';
 import { billingAPI } from '../api';
 import { formatCurrency } from '../config/currency';
-import { Plus, Edit, Trash2, Eye, Search, Download, Printer } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Search, Download, Printer, X } from 'lucide-react';
 
 const BillsPage = () => {
   const [bills, setBills] = useState([]);
@@ -26,9 +26,15 @@ const BillsPage = () => {
   const [formData, setFormData] = useState({
     bill_number: '',
     billed_to: '',
-    amount: '',
+    customer_address: '',
+    customer_phone: '',
+    customer_email: '',
+    tax_percentage: '0',
+    discount_percentage: '0',
+    payment_method: '',
+    payment_details: '',
     note: '',
-    issued_at: new Date().toISOString().split('T')[0]
+    bill_items: []
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -57,18 +63,26 @@ const BillsPage = () => {
 
   const generateBillNumber = () => {
     const timestamp = Date.now();
-    return `BILL-${timestamp.toString().slice(-6)}`;
+    return `INV-${timestamp.toString().slice(-6)}`;
   };
 
   const handleCreate = () => {
     setModalMode('create');
     setSelectedBill(null);
     setFormData({
-      bill_number: generateBillNumber(),
+      bill_number: '', // Backend will generate automatically if empty
       billed_to: '',
-      amount: '',
+      customer_address: '',
+      customer_phone: '',
+      customer_email: '',
+      tax_percentage: '0',
+      discount_percentage: '0',
+      payment_method: '',
+      payment_details: '',
       note: '',
-      issued_at: new Date().toISOString().split('T')[0]
+      bill_items: [
+        { description: '', quantity: 1, unit_price: 0, unit: 'piece', notes: '' }
+      ]
     });
     setFormErrors({});
     setShowModal(true);
@@ -80,9 +94,17 @@ const BillsPage = () => {
     setFormData({
       bill_number: bill.bill_number,
       billed_to: bill.billed_to,
-      amount: bill.amount,
+      customer_address: bill.customer_address || '',
+      customer_phone: bill.customer_phone || '',
+      customer_email: bill.customer_email || '',
+      tax_percentage: bill.tax_percentage?.toString() || '0',
+      discount_percentage: bill.discount_percentage?.toString() || '0',
+      payment_method: bill.payment_method || '',
+      payment_details: bill.payment_details || '',
       note: bill.note || '',
-      issued_at: bill.issued_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+      bill_items: bill.bill_items?.length > 0 ? bill.bill_items : [
+        { description: '', quantity: 1, unit_price: 0, unit: 'piece', notes: '' }
+      ]
     });
     setFormErrors({});
     setShowModal(true);
@@ -100,6 +122,53 @@ const BillsPage = () => {
 
   const handleCloseToast = () => setToast(t => ({ ...t, visible: false }));
 
+  const addBillItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      bill_items: [...prev.bill_items, { description: '', quantity: 1, unit_price: 0, unit: 'piece', notes: '' }]
+    }));
+  };
+
+  const removeBillItem = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      bill_items: prev.bill_items.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateBillItem = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      bill_items: prev.bill_items.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
+  };
+
+  const calculateSubtotal = () => {
+    return formData.bill_items.reduce((sum, item) => {
+      return sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+    }, 0);
+  };
+
+  const calculateDiscount = (subtotal) => {
+    const discountPercentage = parseFloat(formData.discount_percentage) || 0;
+    return (subtotal * discountPercentage) / 100;
+  };
+
+  const calculateTax = (subtotal, discount) => {
+    const taxPercentage = parseFloat(formData.tax_percentage) || 0;
+    const taxableAmount = subtotal - discount;
+    return (taxableAmount * taxPercentage) / 100;
+  };
+
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const discount = calculateDiscount(subtotal);
+    const tax = calculateTax(subtotal, discount);
+    return subtotal - discount + tax;
+  };
+
   const handleDelete = (bill) => {
     setConfirmState({ open: true, bill });
   };
@@ -108,21 +177,21 @@ const BillsPage = () => {
     try {
       showToast('Generating PDF...', 'info');
       
-      // Create new jsPDF instance
       const pdf = new jsPDF();
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       
-      // Set up colors
+      // Colors matching our design
       const primaryColor = [37, 99, 235]; // Blue
       const textColor = [31, 41, 55]; // Gray-800
       const lightGray = [243, 244, 246]; // Gray-100
+      const accentColor = [250, 204, 21]; // Yellow
       
       // Header
       pdf.setFillColor(...primaryColor);
       pdf.rect(0, 0, pageWidth, 40, 'F');
       
-      // Company/Invoice title
+      // Invoice title
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(24);
       pdf.setFont('helvetica', 'bold');
@@ -130,55 +199,139 @@ const BillsPage = () => {
       
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Bill #${bill.bill_number}`, pageWidth / 2, 30, { align: 'center' });
+      pdf.text(`${bill.bill_number}`, pageWidth / 2, 30, { align: 'center' });
       
-      // Reset text color for body
+      // Reset text color
       pdf.setTextColor(...textColor);
       
-      // Bill details section
       let yPosition = 60;
       
-      // Bill To and Date section
+      // Customer Information
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Bill To:', 20, yPosition);
-      pdf.text('Issue Date:', pageWidth - 70, yPosition);
+      pdf.text('Invoice to:', 20, yPosition);
+      
+      yPosition += 10;
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(bill.billed_to, 20, yPosition);
+      
+      if (bill.customer_address) {
+        yPosition += 6;
+        const addressLines = pdf.splitTextToSize(bill.customer_address, 80);
+        pdf.text(addressLines, 20, yPosition);
+        yPosition += addressLines.length * 6;
+      }
+      
+      if (bill.customer_phone || bill.customer_email) {
+        if (bill.customer_phone) {
+          yPosition += 6;
+          pdf.text(`Phone: ${bill.customer_phone}`, 20, yPosition);
+        }
+        if (bill.customer_email) {
+          yPosition += 6;
+          pdf.text(`Email: ${bill.customer_email}`, 20, yPosition);
+        }
+      }
+      
+      // Invoice details (right side)
+      const rightX = pageWidth - 80;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Invoice #:', rightX, 60);
+      pdf.text('Date:', rightX, 70);
       
       pdf.setFont('helvetica', 'normal');
-      pdf.text(bill.billed_to, 20, yPosition + 10);
-      pdf.text(new Date(bill.issued_at).toLocaleDateString(), pageWidth - 70, yPosition + 10);
+      pdf.text(bill.bill_number, rightX + 25, 60);
+      pdf.text(new Date(bill.issued_at).toLocaleDateString(), rightX + 25, 70);
       
-      // Amount section
-      yPosition += 40;
+      // Items table
+      yPosition = Math.max(yPosition + 20, 100);
       
-      // Draw amount box
+      // Table header
       pdf.setFillColor(...lightGray);
-      pdf.rect(20, yPosition, pageWidth - 40, 30, 'F');
+      pdf.rect(20, yPosition, pageWidth - 40, 15, 'F');
       
-      // Amount label and value
-      pdf.setFontSize(14);
+      pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Amount Due:', 30, yPosition + 15);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFillColor(...primaryColor);
+      pdf.rect(20, yPosition, pageWidth - 40, 15, 'F');
       
-      pdf.setFontSize(18);
-      pdf.setTextColor(...primaryColor);
-      pdf.text(formatCurrency(bill.amount), pageWidth - 30, yPosition + 15, { align: 'right' });
+      pdf.text('ITEM DESCRIPTION', 25, yPosition + 10);
+      pdf.text('QTY', pageWidth - 110, yPosition + 10);
+      pdf.text('PRICE', pageWidth - 80, yPosition + 10);
+      pdf.text('TOTAL', pageWidth - 40, yPosition + 10);
       
-      // Reset color
+      yPosition += 15;
       pdf.setTextColor(...textColor);
+      pdf.setFont('helvetica', 'normal');
       
-      // Note section (if exists)
-      if (bill.note) {
-        yPosition += 50;
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Note:', 20, yPosition);
+      // Items
+      bill.bill_items?.forEach((item, index) => {
+        if (yPosition > pageHeight - 80) {
+          pdf.addPage();
+          yPosition = 40;
+        }
         
+        // Alternate row background
+        if (index % 2 === 1) {
+          pdf.setFillColor(248, 249, 250);
+          pdf.rect(20, yPosition - 5, pageWidth - 40, 15, 'F');
+        }
+        
+        const descLines = pdf.splitTextToSize(item.description, 100);
+        pdf.text(descLines, 25, yPosition + 5);
+        pdf.text(item.quantity.toString(), pageWidth - 110, yPosition + 5);
+        pdf.text(formatCurrency(item.unit_price), pageWidth - 80, yPosition + 5);
+        pdf.text(formatCurrency(item.total || (item.quantity * item.unit_price)), pageWidth - 40, yPosition + 5);
+        
+        yPosition += Math.max(15, descLines.length * 5 + 5);
+      });
+      
+      // Totals section
+      yPosition += 10;
+      const totalsX = pageWidth - 80;
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('SUB TOTAL:', totalsX - 40, yPosition);
+      pdf.text(formatCurrency(bill.subtotal), totalsX, yPosition);
+      
+      if (bill.discount_amount > 0) {
+        yPosition += 10;
+        pdf.text(`DISCOUNT (${bill.discount_percentage}%):`, totalsX - 40, yPosition);
+        pdf.text(`-${formatCurrency(bill.discount_amount)}`, totalsX, yPosition);
+      }
+      
+      if (bill.tax_amount > 0) {
+        yPosition += 10;
+        pdf.text(`TAX (${bill.tax_percentage}%):`, totalsX - 40, yPosition);
+        pdf.text(formatCurrency(bill.tax_amount), totalsX, yPosition);
+      }
+      
+      yPosition += 15;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.text('GRAND TOTAL:', totalsX - 40, yPosition);
+      pdf.text(formatCurrency(bill.total_amount), totalsX, yPosition);
+      
+      // Payment method section
+      if (bill.payment_method) {
+        yPosition += 20;
+        pdf.setFillColor(...accentColor);
+        pdf.rect(20, yPosition, pageWidth - 40, 15, 'F');
+        
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('PAYMENT METHOD', pageWidth / 2, yPosition + 10, { align: 'center' });
+        
+        yPosition += 20;
         pdf.setFont('helvetica', 'normal');
-        // Handle long notes by splitting into lines
-        const noteLines = pdf.splitTextToSize(bill.note, pageWidth - 40);
-        pdf.text(noteLines, 20, yPosition + 10);
-        yPosition += (noteLines.length * 5) + 10;
+        pdf.text(bill.payment_method.replace('_', ' ').toUpperCase(), 25, yPosition);
+        
+        if (bill.payment_details) {
+          yPosition += 10;
+          const paymentLines = pdf.splitTextToSize(bill.payment_details, pageWidth - 50);
+          pdf.text(paymentLines, 25, yPosition);
+        }
       }
       
       // Footer
@@ -188,14 +341,16 @@ const BillsPage = () => {
       
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(107, 114, 128); // Gray-500
-      pdf.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, footerY + 10, { align: 'center' });
-      pdf.text('Thank you for your business!', pageWidth / 2, footerY + 20, { align: 'center' });
+      pdf.setTextColor(107, 114, 128);
+      pdf.text('Thank you for business with us!', pageWidth / 2, footerY + 10, { align: 'center' });
+      pdf.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, footerY + 20, { align: 'center' });
       
-      // Save the PDF
-      pdf.save(`bill-${bill.bill_number}.pdf`);
+      if (bill.note) {
+        pdf.text('Terms & Conditions can be here', pageWidth / 2, footerY + 30, { align: 'center' });
+      }
       
-      showToast(`PDF downloaded successfully for bill #${bill.bill_number}`, 'success');
+      pdf.save(`invoice-${bill.bill_number}.pdf`);
+      showToast(`PDF downloaded successfully for ${bill.bill_number}`, 'success');
     } catch (err) {
       showToast('Failed to generate PDF. Please try again.', 'error');
       console.error('PDF generation error:', err);
@@ -203,19 +358,15 @@ const BillsPage = () => {
   };
 
   const handlePrint = (bill) => {
-    // Create a new window for printing
     const printWindow = window.open('', '_blank');
-    
-    // Get current date for the print
     const currentDate = new Date().toLocaleDateString();
     const issueDate = new Date(bill.issued_at).toLocaleDateString();
     
-    // Create the HTML content for printing
     const printContent = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Bill #${bill.bill_number}</title>
+          <title>Invoice ${bill.bill_number}</title>
           <meta charset="UTF-8">
           <style>
             body {
@@ -246,7 +397,7 @@ const BillsPage = () => {
               font-weight: normal;
               opacity: 0.9;
             }
-            .bill-info {
+            .invoice-info {
               display: flex;
               justify-content: space-between;
               margin-bottom: 30px;
@@ -254,10 +405,10 @@ const BillsPage = () => {
               padding: 20px;
               border-radius: 8px;
             }
-            .bill-info div {
+            .invoice-info div {
               flex: 1;
             }
-            .bill-info h3 {
+            .invoice-info h3 {
               margin: 0 0 10px 0;
               color: #2563eb;
               font-size: 14px;
@@ -265,49 +416,68 @@ const BillsPage = () => {
               text-transform: uppercase;
               letter-spacing: 1px;
             }
-            .bill-info p {
-              margin: 0;
-              font-size: 16px;
-              font-weight: 500;
+            .invoice-info p {
+              margin: 2px 0;
+              font-size: 14px;
             }
-            .amount-section {
+            .items-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+              background: white;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            .items-table th {
+              background: #2563eb;
+              color: white;
+              padding: 12px 8px;
+              text-align: left;
+              font-size: 12px;
+              font-weight: bold;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .items-table td {
+              padding: 12px 8px;
+              border-bottom: 1px solid #e5e7eb;
+              font-size: 14px;
+            }
+            .items-table tbody tr:nth-child(even) {
+              background-color: #f9fafb;
+            }
+            .items-table tbody tr:hover {
+              background-color: #f3f4f6;
+            }
+            .totals-section {
+              margin-top: 30px;
+              padding: 20px;
               background: #f1f5f9;
-              padding: 25px;
-              border-radius: 12px;
-              margin-bottom: 30px;
-              border: 2px solid #e2e8f0;
+              border-radius: 8px;
             }
-            .amount-container {
+            .totals-row {
               display: flex;
               justify-content: space-between;
-              align-items: center;
+              margin-bottom: 8px;
+              font-size: 14px;
             }
-            .amount-label {
-              font-size: 16px;
-              font-weight: 600;
-              color: #475569;
-            }
-            .amount {
-              font-size: 32px;
+            .totals-row.grand-total {
+              font-size: 18px;
               font-weight: bold;
               color: #2563eb;
+              border-top: 2px solid #2563eb;
+              padding-top: 12px;
+              margin-top: 12px;
             }
-            .note {
-              background: #fef3c7;
-              padding: 20px;
-              border-radius: 8px;
-              border-left: 4px solid #f59e0b;
-              margin-bottom: 30px;
-            }
-            .note h4 {
-              margin: 0 0 10px 0;
+            .payment-method {
+              background: #fbbf24;
               color: #92400e;
-              font-size: 16px;
-            }
-            .note p {
-              margin: 0;
-              color: #78350f;
-              line-height: 1.5;
+              padding: 15px;
+              border-radius: 8px;
+              margin: 20px 0;
+              text-align: center;
+              font-weight: bold;
+              text-transform: uppercase;
+              letter-spacing: 1px;
             }
             .footer {
               text-align: center;
@@ -319,10 +489,16 @@ const BillsPage = () => {
             .footer p {
               margin: 5px 0;
             }
-            .company-info {
-              margin-top: 20px;
-              font-style: italic;
-              color: #9ca3af;
+            .note-section {
+              background: #fef3c7;
+              padding: 15px;
+              border-radius: 8px;
+              border-left: 4px solid #f59e0b;
+              margin: 20px 0;
+            }
+            .note-section h4 {
+              margin: 0 0 10px 0;
+              color: #92400e;
             }
             @media print {
               body { 
@@ -331,9 +507,6 @@ const BillsPage = () => {
               }
               .header {
                 margin: -15px -15px 20px -15px;
-              }
-              .no-print { 
-                display: none; 
               }
             }
             @page {
@@ -344,40 +517,88 @@ const BillsPage = () => {
         <body>
           <div class="header">
             <h1>INVOICE</h1>
-            <h2>Bill #${bill.bill_number}</h2>
+            <h2>${bill.bill_number}</h2>
           </div>
           
-          <div class="bill-info">
+          <div class="invoice-info">
             <div>
-              <h3>Bill To</h3>
-              <p>${bill.billed_to}</p>
+              <h3>Invoice to</h3>
+              <p><strong>${bill.billed_to}</strong></p>
+              ${bill.customer_address ? `<p>${bill.customer_address}</p>` : ''}
+              ${bill.customer_phone ? `<p>Phone: ${bill.customer_phone}</p>` : ''}
+              ${bill.customer_email ? `<p>Email: ${bill.customer_email}</p>` : ''}
             </div>
             <div>
-              <h3>Issue Date</h3>
-              <p>${issueDate}</p>
+              <h3>Invoice Details</h3>
+              <p><strong>Invoice #:</strong> ${bill.bill_number}</p>
+              <p><strong>Date:</strong> ${issueDate}</p>
             </div>
           </div>
           
-          <div class="amount-section">
-            <div class="amount-container">
-              <span class="amount-label">Amount Due:</span>
-              <span class="amount">${formatCurrency(bill.amount)}</span>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Item Description</th>
+                <th width="10%">Qty</th>
+                <th width="15%">Price</th>
+                <th width="15%">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${bill.bill_items?.map(item => `
+                <tr>
+                  <td>
+                    ${item.description}
+                    ${item.notes ? `<br><small style="color: #6b7280;">${item.notes}</small>` : ''}
+                  </td>
+                  <td>${item.quantity} ${item.unit || ''}</td>
+                  <td>${formatCurrency(item.unit_price)}</td>
+                  <td>${formatCurrency(item.total || (item.quantity * item.unit_price))}</td>
+                </tr>
+              `).join('') || ''}
+            </tbody>
+          </table>
+          
+          <div class="totals-section">
+            <div class="totals-row">
+              <span>Sub Total:</span>
+              <span>${formatCurrency(bill.subtotal)}</span>
+            </div>
+            ${bill.discount_amount > 0 ? `
+              <div class="totals-row">
+                <span>Discount (${bill.discount_percentage}%):</span>
+                <span>-${formatCurrency(bill.discount_amount)}</span>
+              </div>
+            ` : ''}
+            ${bill.tax_amount > 0 ? `
+              <div class="totals-row">
+                <span>Tax (${bill.tax_percentage}%):</span>
+                <span>${formatCurrency(bill.tax_amount)}</span>
+              </div>
+            ` : ''}
+            <div class="totals-row grand-total">
+              <span>Grand Total:</span>
+              <span>${formatCurrency(bill.total_amount)}</span>
             </div>
           </div>
+          
+          ${bill.payment_method ? `
+            <div class="payment-method">
+              Payment Method: ${bill.payment_method.replace('_', ' ')}
+              ${bill.payment_details ? `<br><small>${bill.payment_details}</small>` : ''}
+            </div>
+          ` : ''}
           
           ${bill.note ? `
-            <div class="note">
+            <div class="note-section">
               <h4>Additional Notes:</h4>
               <p>${bill.note}</p>
             </div>
           ` : ''}
           
           <div class="footer">
-            <p><strong>Generated on ${currentDate}</strong></p>
-            <p>Thank you for your business!</p>
-            <div class="company-info">
-              <p>This is a computer-generated invoice.</p>
-            </div>
+            <p><strong>Thank you for business with us!</strong></p>
+            <p>Generated on ${currentDate}</p>
           </div>
           
           <script>
@@ -418,20 +639,26 @@ const BillsPage = () => {
   const validateForm = () => {
     const errors = {};
     
-    if (!formData.bill_number.trim()) {
-      errors.bill_number = 'Bill number is required';
-    }
+    // Invoice number is optional - backend will generate if not provided
     
     if (!formData.billed_to.trim()) {
-      errors.billed_to = 'Billed to is required';
+      errors.billed_to = 'Customer name is required';
     }
     
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      errors.amount = 'Amount must be greater than 0';
-    }
-    
-    if (!formData.issued_at) {
-      errors.issued_at = 'Issue date is required';
+    if (!formData.bill_items || formData.bill_items.length === 0) {
+      errors.bill_items = 'At least one item is required';
+    } else {
+      formData.bill_items.forEach((item, index) => {
+        if (!item.description.trim()) {
+          errors[`item_${index}_description`] = 'Item description is required';
+        }
+        if (!item.quantity || parseFloat(item.quantity) <= 0) {
+          errors[`item_${index}_quantity`] = 'Quantity must be greater than 0';
+        }
+        if (item.unit_price === '' || parseFloat(item.unit_price) < 0) {
+          errors[`item_${index}_unit_price`] = 'Unit price must be 0 or greater';
+        }
+      });
     }
 
     setFormErrors(errors);
@@ -497,26 +724,33 @@ const BillsPage = () => {
   const columns = [
     {
       key: 'bill_number',
-      header: 'Bill Number'
+      header: 'Invoice #'
     },
     {
       key: 'issued_at',
-      header: 'Issue Date',
+      header: 'Date',
       render: (bill) => new Date(bill.issued_at).toLocaleDateString()
     },
     {
       key: 'billed_to',
-      header: 'Billed To'
+      header: 'Customer'
     },
     {
-      key: 'amount',
-      header: 'Amount',
-      render: (bill) => formatCurrency(bill.amount)
+      key: 'items_count',
+      header: 'Items',
+      render: (bill) => bill.bill_items?.length || 0
     },
     {
-      key: 'note',
-      header: 'Note',
-      render: (bill) => bill.note || '-'
+      key: 'total_amount',
+      header: 'Total Amount',
+      render: (bill) => formatCurrency(bill.total_amount || 0)
+    },
+    {
+      key: 'payment_method',
+      header: 'Payment',
+      render: (bill) => bill.payment_method ? 
+        bill.payment_method.replace('_', ' ').toUpperCase() : 
+        'Not specified'
     },
     {
       key: 'actions',
@@ -603,10 +837,10 @@ const BillsPage = () => {
               </svg>
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Bill #{successModal.bill?.bill_number} has been created successfully!
+              Invoice {successModal.bill?.bill_number} has been created successfully!
             </h3>
             <p className="text-sm text-gray-500">
-              For {successModal.bill?.billed_to} • {formatCurrency(successModal.bill?.amount || 0)}
+              For {successModal.bill?.billed_to} • {formatCurrency(successModal.bill?.total_amount || 0)}
             </p>
           </div>
           
@@ -654,12 +888,12 @@ const BillsPage = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Bills</h1>
-            <p className="text-gray-600">Manage your billing and invoices</p>
+            <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
+            <p className="text-gray-600">Create and manage professional invoices</p>
           </div>
           <Button onClick={handleCreate} className="mt-4 sm:mt-0">
             <Plus className="w-4 h-4 mr-2" />
-            Create Bill
+            Create Invoice
           </Button>
         </div>
 
@@ -704,56 +938,158 @@ const BillsPage = () => {
           )}
         </Card>
 
-        {/* Bill Modal */}
+        {/* Invoice Modal */}
         <Modal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
           title={
-            modalMode === 'create' ? 'Create Bill' :
-            modalMode === 'edit' ? 'Edit Bill' :
-            'Bill Details'
+            modalMode === 'create' ? 'Create New Invoice' :
+            modalMode === 'edit' ? 'Edit Invoice' :
+            'Invoice Details'
           }
-          size="md"
+          size="2xl"
         >
           {modalMode === 'view' ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Bill Number</label>
-                <p className="mt-1 text-sm text-gray-900">{selectedBill?.bill_number}</p>
+            <div className="space-y-6">
+              {/* Invoice Header */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-xl font-bold text-blue-900">INVOICE</h3>
+                    <p className="text-blue-700 font-medium">{selectedBill?.bill_number}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-600">Issue Date</p>
+                    <p className="text-sm font-medium">{new Date(selectedBill?.issued_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Billed To</label>
-                <p className="mt-1 text-sm text-gray-900">{selectedBill?.billed_to}</p>
+
+              {/* Customer Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Invoice To:</h4>
+                  <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+                    <p className="font-medium text-sm">{selectedBill?.billed_to}</p>
+                    {selectedBill?.customer_address && (
+                      <p className="text-xs text-gray-600">{selectedBill.customer_address}</p>
+                    )}
+                    {selectedBill?.customer_phone && (
+                      <p className="text-xs text-gray-600">Phone: {selectedBill.customer_phone}</p>
+                    )}
+                    {selectedBill?.customer_email && (
+                      <p className="text-xs text-gray-600">Email: {selectedBill.customer_email}</p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Total Amount</h4>
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-200">
+                    <p className="text-2xl font-bold text-green-600">
+                      {formatCurrency(selectedBill?.total_amount || 0)}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Amount</label>
-                <p className="mt-1 text-sm text-gray-900">
-                  {formatCurrency(selectedBill?.amount || 0)}
-                </p>
+
+              {/* Items Table */}
+              {selectedBill?.bill_items && selectedBill.bill_items.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Items</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full bg-white border border-gray-200 rounded-lg text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {selectedBill.bill_items.map((item, index) => (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-3 py-2">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{item.description}</p>
+                                {item.notes && <p className="text-xs text-gray-500">{item.notes}</p>}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-sm text-gray-900">{item.quantity} {item.unit}</td>
+                            <td className="px-3 py-2 text-sm text-gray-900">{formatCurrency(item.unit_price)}</td>
+                            <td className="px-3 py-2 text-sm font-medium text-gray-900">{formatCurrency(item.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Totals */}
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Sub Total:</span>
+                    <span className="font-medium">{formatCurrency(selectedBill?.subtotal || 0)}</span>
+                  </div>
+                  {selectedBill?.discount_amount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Discount ({selectedBill.discount_percentage}%):</span>
+                      <span className="font-medium text-red-600">-{formatCurrency(selectedBill.discount_amount)}</span>
+                    </div>
+                  )}
+                  {selectedBill?.tax_amount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Tax ({selectedBill.tax_percentage}%):</span>
+                      <span className="font-medium">{formatCurrency(selectedBill.tax_amount)}</span>
+                    </div>
+                  )}
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between">
+                      <span className="font-bold text-gray-900">Grand Total:</span>
+                      <span className="font-bold text-blue-600">{formatCurrency(selectedBill?.total_amount || 0)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Issue Date</label>
-                <p className="mt-1 text-sm text-gray-900">
-                  {new Date(selectedBill?.issued_at).toLocaleDateString()}
-                </p>
+
+              {/* Payment Method & Notes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {selectedBill?.payment_method && (
+                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                    <h4 className="font-medium text-gray-900 mb-1 text-sm">Payment Method</h4>
+                    <p className="text-sm font-medium">{selectedBill.payment_method.replace('_', ' ').toUpperCase()}</p>
+                    {selectedBill.payment_details && (
+                      <p className="text-xs text-gray-600 mt-1">{selectedBill.payment_details}</p>
+                    )}
+                  </div>
+                )}
+
+                {selectedBill?.note && (
+                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                    <h4 className="font-medium text-gray-900 mb-1 text-sm">Additional Notes</h4>
+                    <p className="text-xs text-gray-700">{selectedBill.note}</p>
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Note</label>
-                <p className="mt-1 text-sm text-gray-900">{selectedBill?.note || 'No note provided'}</p>
-              </div>
-              <div className="pt-4 space-y-3">
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
                 <Button
                   onClick={() => handlePrint(selectedBill)}
                   variant="outline"
-                  className="w-full"
+                  className="flex-1"
+                  size="sm"
                 >
                   <Printer className="w-4 h-4 mr-2" />
-                  Print Bill
+                  Print
                 </Button>
                 <Button
                   onClick={() => handleDownloadPDF(selectedBill)}
                   variant="outline"
-                  className="w-full"
+                  className="flex-1"
+                  size="sm"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Download PDF
@@ -761,65 +1097,281 @@ const BillsPage = () => {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Basic Invoice Information */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <InputField
+                      label="Invoice Number (Optional)"
+                      name="bill_number"
+                      value={formData.bill_number}
+                      onChange={handleFormChange}
+                      error={formErrors.bill_number}
+                      placeholder="Leave empty to auto-generate"
+                      disabled={modalMode === 'edit'}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {modalMode === 'create' ? 'Leave empty to auto-generate unique number' : 'Cannot change invoice number'}
+                    </p>
+                  </div>
+                  
+                  <InputField
+                    label="Customer Name"
+                    name="billed_to"
+                    value={formData.billed_to}
+                    onChange={handleFormChange}
+                    error={formErrors.billed_to}
+                    required
+                    placeholder="Customer or company name"
+                  />
+                </div>
+
+                {/* Customer Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <InputField
+                      label="Customer Address (Optional)"
+                      name="customer_address"
+                      value={formData.customer_address}
+                      onChange={handleFormChange}
+                      placeholder="Customer address"
+                    />
+                  </div>
+                  
+                  <InputField
+                    label="Phone Number (Optional)"
+                    name="customer_phone"
+                    value={formData.customer_phone}
+                    onChange={handleFormChange}
+                    placeholder="Phone number"
+                  />
+                  
+                  <InputField
+                    label="Email Address (Optional)"
+                    name="customer_email"
+                    type="email"
+                    value={formData.customer_email}
+                    onChange={handleFormChange}
+                    placeholder="Email address"
+                  />
+                </div>
+              </div>
+
+              {/* Items Section */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium text-gray-900">Invoice Items</h4>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addBillItem}
+                    className="text-blue-600"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Item
+                  </Button>
+                </div>
+                
+                {formErrors.bill_items && (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-2">
+                    <p className="text-sm text-red-600">{formErrors.bill_items}</p>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  {formData.bill_items.map((item, index) => (
+                    <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                      <div className="flex justify-between items-center mb-3">
+                        <h5 className="text-sm font-medium text-gray-700 flex items-center">
+                          <span className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs mr-2">
+                            {index + 1}
+                          </span>
+                          Item {index + 1}
+                        </h5>
+                        {formData.bill_items.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeBillItem(index)}
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div className="md:col-span-2">
+                          <InputField
+                            label="Description"
+                            value={item.description}
+                            onChange={(e) => updateBillItem(index, 'description', e.target.value)}
+                            error={formErrors[`item_${index}_description`]}
+                            required
+                            placeholder="Describe the item or service"
+                          />
+                        </div>
+                        
+                        <div>
+                          <InputField
+                            label="Quantity"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.quantity}
+                            onChange={(e) => updateBillItem(index, 'quantity', e.target.value)}
+                            error={formErrors[`item_${index}_quantity`]}
+                            required
+                          />
+                        </div>
+                        
+                        <div>
+                          <CurrencyInput
+                            label="Unit Price"
+                            value={item.unit_price}
+                            onChange={(e) => updateBillItem(index, 'unit_price', e.target.value)}
+                            error={formErrors[`item_${index}_unit_price`]}
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                        <InputField
+                          label="Unit (Optional)"
+                          value={item.unit}
+                          onChange={(e) => updateBillItem(index, 'unit', e.target.value)}
+                          placeholder="pc, kg, hr"
+                        />
+                        
+                        <InputField
+                          label="Notes (Optional)"
+                          value={item.notes}
+                          onChange={(e) => updateBillItem(index, 'notes', e.target.value)}
+                          placeholder="Additional notes"
+                        />
+                      </div>
+                      
+                      <div className="mt-3 text-right">
+                        <span className="text-sm text-gray-600">Line Total: </span>
+                        <span className="font-medium text-blue-600">
+                          {formatCurrency((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0))}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Totals Summary */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Invoice Summary</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal:</span>
+                    <span className="font-medium">{formatCurrency(calculateSubtotal())}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Discount:</span>
+                    <span className="font-medium text-red-600">-{formatCurrency(calculateDiscount(calculateSubtotal()))}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Tax:</span>
+                    <span className="font-medium">{formatCurrency(calculateTax(calculateSubtotal(), calculateDiscount(calculateSubtotal())))}</span>
+                  </div>
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between">
+                      <span className="font-bold text-gray-900">Total Amount:</span>
+                      <span className="text-xl font-bold text-blue-600">{formatCurrency(calculateTotal())}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Configuration */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InputField
+                  label="Tax Percentage (%)"
+                  name="tax_percentage"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={formData.tax_percentage}
+                  onChange={handleFormChange}
+                  placeholder="0.00"
+                />
+                
+                <InputField
+                  label="Discount Percentage (%)"
+                  name="discount_percentage"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={formData.discount_percentage}
+                  onChange={handleFormChange}
+                  placeholder="0.00"
+                />
+              </div>
+
+              {/* Payment Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                  <select
+                    name="payment_method"
+                    value={formData.payment_method}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select payment method</option>
+                    <option value="cash">Cash</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="digital_wallet">Digital Wallet</option>
+                    <option value="credit_card">Credit Card</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                
+                <InputField
+                  label="Payment Details"
+                  name="payment_details"
+                  value={formData.payment_details}
+                  onChange={handleFormChange}
+                  placeholder="Reference number, details, etc."
+                />
+              </div>
+
+              {/* Notes */}
               <InputField
-                label="Bill Number"
-                name="bill_number"
-                value={formData.bill_number}
-                onChange={handleFormChange}
-                error={formErrors.bill_number}
-                required
-                disabled={modalMode === 'edit'}
-              />
-              
-              <InputField
-                label="Billed To"
-                name="billed_to"
-                value={formData.billed_to}
-                onChange={handleFormChange}
-                error={formErrors.billed_to}
-                required
-              />
-              
-              <CurrencyInput
-                label="Amount"
-                name="amount"
-                value={formData.amount}
-                onChange={handleFormChange}
-                error={formErrors.amount}
-                required
-              />
-              
-              <InputField
-                label="Issue Date"
-                name="issued_at"
-                type="date"
-                value={formData.issued_at}
-                onChange={handleFormChange}
-                error={formErrors.issued_at}
-                required
-              />
-              
-              <InputField
-                label="Note"
+                label="Additional Notes"
                 name="note"
                 value={formData.note}
                 onChange={handleFormChange}
-                placeholder="Optional note..."
+                placeholder="Terms, conditions, or additional information"
               />
               
-              <div className="flex space-x-3 pt-4">
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <Button
                   type="submit"
                   loading={submitting}
                   disabled={submitting}
+                  className="flex-1"
                 >
-                  {modalMode === 'create' ? 'Create Bill' : 'Update Bill'}
+                  {submitting ? 'Processing...' : (modalMode === 'create' ? 'Create Invoice' : 'Update Invoice')}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setShowModal(false)}
+                  className="flex-1"
+                  disabled={submitting}
                 >
                   Cancel
                 </Button>
