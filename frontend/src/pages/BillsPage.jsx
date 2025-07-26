@@ -674,8 +674,21 @@ const BillsPage = () => {
 
     setSubmitting(true);
     try {
+      // Clean the form data before sending
+      const cleanedFormData = {
+        ...formData,
+        bill_items: formData.bill_items.map(item => ({
+          ...item,
+          // Remove currency formatting from unit_price
+          unit_price: typeof item.unit_price === 'string' ? 
+            parseFloat(item.unit_price.replace(/[^0-9.-]/g, '')) || 0 : 
+            parseFloat(item.unit_price) || 0,
+          quantity: parseFloat(item.quantity) || 1
+        }))
+      };
+
       if (modalMode === 'create') {
-        const response = await billingAPI.createBill(formData);
+        const response = await billingAPI.createBill(cleanedFormData);
         setBills(prev => [response.data, ...prev]);
         setShowModal(false);
         
@@ -685,7 +698,7 @@ const BillsPage = () => {
         // Show success modal with print/download options
         setSuccessModal({ open: true, bill: response.data });
       } else {
-        const response = await billingAPI.updateBill(selectedBill.id, formData);
+        const response = await billingAPI.updateBill(selectedBill.id, cleanedFormData);
         setBills(prev => prev.map(b => 
           b.id === selectedBill.id ? response.data : b
         ));

@@ -18,22 +18,28 @@ class BillListCreateView(APIView):
 
     def post(self, request):
         try:
+            # Make a copy of the request data to avoid modifying the original
+            data = request.data.copy()
+            
             # Generate unique bill number if not provided or empty
-            if not request.data.get('bill_number') or not request.data.get('bill_number').strip():
-                request.data['bill_number'] = self.generate_bill_number()
+            if not data.get('bill_number') or not data.get('bill_number').strip():
+                data['bill_number'] = self.generate_bill_number()
             
             # Set the issued_by field to the current user
-            request.data['issued_by'] = request.user.id
+            data['issued_by'] = request.user.id
             
             with transaction.atomic():
-                serializer = PostBillSerializer(data=request.data)
+                serializer = PostBillSerializer(data=data)
                 if serializer.is_valid():
                     bill = serializer.save()
                     # Return the created bill with all details
                     response_serializer = GetBillSerializer(bill)
                     return Response(response_serializer.data, status=status.HTTP_201_CREATED)
                 else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({
+                        "error": "Validation failed",
+                        "details": serializer.errors
+                    }, status=status.HTTP_400_BAD_REQUEST)
                     
         except Exception as e:
             return Response(
