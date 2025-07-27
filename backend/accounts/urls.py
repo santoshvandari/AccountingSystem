@@ -4,12 +4,13 @@ from accounts import views
 
 urlpatterns = [
     path('login/', views.LoginView.as_view(), name='token_obtain_pair'),
-    path("user/", views.UserView.as_view(), name="register"),
+    path("user/", views.UserView.as_view(), name="user_list"),
     path("register/", views.RegisterView.as_view(), name="register"),
     path("profile/", views.ProfileView.as_view(), name="profile"),
     path("update-profile/", views.UpdateProfileView.as_view(), name="update_profile"),   
     path("delete-user/", views.DeleteUserView.as_view(), name="delete_user"),
     path("change-password/", views.ChangePasswordView.as_view(), name="change_password"),
+    path("permissions/", views.UserPermissionsView.as_view(), name="user_permissions"),
 
 
 

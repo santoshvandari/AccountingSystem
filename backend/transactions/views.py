@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework import permissions
 from transactions.serializer import CreateTransactionSerializer, GetTransactionSerializer, GetTransactionSummarySerializer,UpdateTransactionSerializer
 from transactions.models import Transaction
+from core.permissions import TransactionPermissions, CashierReadOnlyAfterCreation, IsSuperUserOnly
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q,Sum
@@ -30,7 +31,7 @@ class GetTransaction(APIView):
 
 
 class CreateTransaction(APIView):
-    permission_classes= [permissions.IsAuthenticated]
+    permission_classes= [TransactionPermissions]
     def post(self, request):
         request.data["user"] = request.user.id  # Set the user_id to the current user's ID
         serializer = CreateTransactionSerializer(data=request.data)
@@ -40,11 +41,18 @@ class CreateTransaction(APIView):
     
 
 class UpdateTransaction(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [CashierReadOnlyAfterCreation]
 
     def put(self, request, transaction_id=None):
         if not transaction_id:
             return Response({"error": "Transaction ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check permissions explicitly for better error messages
+        if request.user.role == 'cashier':
+            return Response({
+                "error": "Cashiers cannot edit transactions after creation. Please contact a manager."
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         try:
             transaction = Transaction.objects.get(id=transaction_id)
         except Transaction.DoesNotExist:
@@ -70,14 +78,21 @@ class GetTransactionDetail(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class DeleteTransaction(APIView):
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsSuperUserOnly]
 
     def delete(self, request, transaction_id=None):
         """
-        Delete a transaction by its ID. Only accessible by admin users.
+        Delete a transaction by its ID. Only accessible by superuser.
         """
         if not transaction_id:
             return Response({"error": "Transaction ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Additional check for better error message
+        if not request.user.is_superuser:
+            return Response({
+                "error": "Only superusers can delete transactions. Please contact a system administrator."
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         try:
             transaction = Transaction.objects.get(id=transaction_id)
         except Transaction.DoesNotExist:
