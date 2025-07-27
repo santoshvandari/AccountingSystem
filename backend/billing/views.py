@@ -5,11 +5,12 @@ from billing.models import Bill, BillItem
 from billing.serializers import BillPDFSerializer, GetBillSerializer, PostBillSerializer
 from rest_framework import permissions
 from django.db import transaction
+from core.permissions import BillingPermissions, CashierReadOnlyAfterCreation, IsSuperUserOnly
 import uuid
 
 # Create your views here.
 class BillListCreateView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [BillingPermissions]
     
     def get(self, request):
         bills = Bill.objects.all().prefetch_related('bill_items', 'issued_by')
@@ -93,10 +94,16 @@ class BillDetailView(APIView):
 
 
 class BillUpdateView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [CashierReadOnlyAfterCreation]
     
     def put(self, request, id):
         try:
+            # Check permissions explicitly for better error messages
+            if request.user.role == 'cashier':
+                return Response({
+                    "error": "Cashiers cannot edit bills after creation. Please contact a manager."
+                }, status=status.HTTP_403_FORBIDDEN)
+            
             bill = Bill.objects.get(id=id)
             
             with transaction.atomic():
@@ -122,10 +129,16 @@ class BillUpdateView(APIView):
 
 
 class BillDeleteView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsSuperUserOnly]
     
     def delete(self, request, id):
         try:
+            # Additional check for better error message
+            if not request.user.is_superuser:
+                return Response({
+                    "error": "Only superusers can delete bills. Please contact a system administrator."
+                }, status=status.HTTP_403_FORBIDDEN)
+            
             bill = Bill.objects.get(id=id)
             bill_number = bill.bill_number
             bill.delete()

@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
 from accounts.serializers import ChangePasswordSerializer, UserSerializer,LoginSerializer,ProfileViewSerializer
+from core.permissions import CanCreateUsers, IsManagerOrAbove, IsSuperUserOnly
 
 from django.contrib.auth import authenticate
 from accounts.utils import get_tokens_for_user
@@ -20,14 +21,26 @@ logger = logging.getLogger(__name__)
 
 # Create your views here.
 class UserView(APIView):
-    permission_classes = [permissions.IsAuthenticated]   
-    # Get the Individual user information  
+    permission_classes = [IsManagerOrAbove]   
+    # Get the user information based on role permissions
     def get(self, request):
         """
-        Returns the current user's information.
+        Returns user information based on role:
+        - Superusers and Admins: See all users
+        - Managers: See only cashiers they can manage
         """
-        user = User.objects.all()
-        serializer = UserSerializer(user, many=True)
+        if request.user.is_superuser or request.user.role == 'admin':
+            # Admins can see all users
+            users = User.objects.all()
+        elif request.user.role == 'manager':
+            # Managers can only see cashiers
+            users = User.objects.filter(role='cashier')
+        else:
+            return Response({
+                "error": "Insufficient permissions to view users"
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -36,11 +49,20 @@ class RegisterView(APIView):
     """
     Handles user registration and updates.
     """
-    permission_classes = [permissions.IsAdminUser] # Only admin can register new users
+    permission_classes = [CanCreateUsers] # Managers can create cashiers, admins can create any
     def post(self, request):
         """
         Registers a new user.
         """
+        # Additional validation for managers creating users
+        if request.user.role == 'manager':
+            role = request.data.get('role', '').lower()
+            if role != 'cashier':
+                return Response(
+                    {"error": "Managers can only create cashier accounts"}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             try:
@@ -72,7 +94,7 @@ class UpdateUserView(APIView):
 
 # Delete the user account
 class DeleteUserView(APIView):
-    permission_classes = [permissions.IsAdminUser]  # Only authenticated users can delete their account       
+    permission_classes = [IsSuperUserOnly]  # Only superuser can delete user accounts       
     def delete(self, request):
         """
         Deletes the current user.
@@ -168,3 +190,32 @@ class ChangePasswordView(APIView):
         if serializer.is_valid():
             return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Get User Permissions View
+class UserPermissionsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """
+        Returns the current user's permissions based on their role.
+        """
+        user = request.user
+        permissions_data = {
+            "role": user.role,
+            "is_superuser": user.is_superuser,
+            "permissions": {
+                "can_create_bills": user.role in ['admin', 'manager', 'cashier'],
+                "can_edit_bills": user.role in ['admin', 'manager'] or user.is_superuser,
+                "can_delete_bills": user.is_superuser,
+                "can_create_transactions": user.role in ['admin', 'manager', 'cashier'],
+                "can_edit_transactions": user.role in ['admin', 'manager'] or user.is_superuser,
+                "can_delete_transactions": user.is_superuser,
+                "can_create_users": user.role in ['admin', 'manager'] or user.is_superuser,
+                "can_create_cashiers_only": user.role == 'manager',
+                "can_delete_users": user.is_superuser,
+                "can_view_all_users": user.role == 'admin' or user.is_superuser,
+                "can_view_cashiers": user.role in ['admin', 'manager'] or user.is_superuser,
+            }
+        }
+        return Response(permissions_data, status=status.HTTP_200_OK)
