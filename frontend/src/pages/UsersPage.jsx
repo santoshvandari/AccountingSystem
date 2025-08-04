@@ -749,7 +749,7 @@ const UsersPage = () => {
                   type="submit"
                   loading={submitting}
                   disabled={submitting}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   {modalMode === 'create' ? 'Create User' : 'Update User'}
                 </Button>
@@ -757,7 +757,7 @@ const UsersPage = () => {
                   type="button"
                   variant="outline"
                   onClick={() => setShowModal(false)}
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
                 >
                   Cancel
                 </Button>
