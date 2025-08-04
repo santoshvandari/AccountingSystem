@@ -166,6 +166,60 @@ const UsersPage = () => {
     }
   };
 
+  const handleExport = () => {
+    // Check if current user is admin
+    if (currentUser?.role !== 'admin') {
+      showToast('Only admin users can export user data', 'error');
+      return;
+    }
+
+    try {
+      // Check if there are users to export
+      if (filteredUsers.length === 0) {
+        showToast('No users found to export', 'warning');
+        return;
+      }
+
+      // Prepare data for export
+      const exportData = filteredUsers.map(user => ({
+        'Full Name': user.full_name,
+        'Username': user.username,
+        'Email': user.email,
+        'Phone Number': user.phone_number || 'N/A',
+        'Role': user.role?.charAt(0).toUpperCase() + user.role?.slice(1),
+        'Status': user.is_active ? 'Active' : 'Inactive',
+        'Joined Date': user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'
+      }));
+
+      // Convert to CSV
+      const headers = Object.keys(exportData[0] || {});
+      const csvContent = [
+        headers.join(','),
+        ...exportData.map(row => 
+          headers.map(header => 
+            `"${String(row[header]).replace(/"/g, '""')}"`
+          ).join(',')
+        )
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `users-export-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showToast(`Successfully exported ${filteredUsers.length} users to CSV`, 'success');
+    } catch (err) {
+      console.error('Export error:', err);
+      showToast('Failed to export users', 'error');
+    }
+  };
+
   const validateForm = () => {
     const errors = {};
     
@@ -456,13 +510,15 @@ const UsersPage = () => {
                 <Plus className="w-4 h-4 mr-2" />
                 Add User
               </Button>
-              <Button 
-                variant="outline" 
-                className="border-white/40 text-white hover:bg-white/20 backdrop-blur-sm transition-all duration-200"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
+              {currentUser?.role === 'admin' && (
+                <Button 
+                  onClick={handleExport}
+                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              )}
             </div>
           </div>
         </div>
