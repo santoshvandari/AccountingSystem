@@ -323,7 +323,9 @@ const TransactionsPage = () => {
                     title={
                         modalMode === 'create' ? '🎯 Add Transaction' :
                             modalMode === 'edit' ? '✏️ Edit Transaction' :
-                                '🧾 Transaction Details'
+                        modalMode === 'create' ? 'Add Transaction' :
+                            modalMode === 'edit' ? 'Edit Transaction' :
+                                'Transaction Details'
                     }
                     size="md"
                 >
