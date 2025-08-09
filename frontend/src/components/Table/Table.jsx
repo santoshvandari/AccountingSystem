@@ -20,14 +20,14 @@ const Table = ({
   `.trim();
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
       <table className={tableClasses}>
-        <thead className="bg-gray-50">
+        <thead className="bg-gray-50 sticky top-0 z-10">
           <tr>
             {columns.map((column, index) => (
               <th
                 key={index}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
               >
                 {column.header}
               </th>
@@ -44,7 +44,7 @@ const Table = ({
               {columns.map((column, colIndex) => (
                 <td
                   key={colIndex}
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                  className="px-5 py-3 whitespace-nowrap text-sm text-gray-900"
                 >
                   {column.render ? column.render(row, rowIndex) : row[column.key]}
                 </td>
@@ -53,9 +53,9 @@ const Table = ({
           ))}
         </tbody>
       </table>
-      
       {data.length === 0 && (
         <div className="text-center py-12 text-gray-500">
+          <div className="mx-auto w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2">📄</div>
           No data available
         </div>
       )}

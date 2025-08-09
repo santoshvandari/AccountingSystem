@@ -81,7 +81,7 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-indigo-100 flex items-center justify-center p-4">
             <div className="max-w-md w-full">
                 <Card className="shadow-2xl">
                     {/* Logo and Title */}
@@ -143,7 +143,7 @@ const LoginPage = () => {
 
                         <Button
                             type="submit"
-                            className="w-full"
+                            fullWidth
                             loading={isLoading}
                             disabled={isLoading}
                         >

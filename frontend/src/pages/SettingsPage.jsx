@@ -184,9 +184,16 @@ const SettingsPage = () => {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600">Manage your account settings and preferences</p>
+        <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-xl p-6 text-white">
+          <div className="flex items-center space-x-3">
+            <div className="bg-white/20 p-3 rounded-lg">
+              <Settings className="w-8 h-8" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Settings</h1>
+              <p className="text-blue-100 mt-1">Manage your account settings and preferences</p>
+            </div>
+          </div>
         </div>
 
         {/* Success/Error Alerts */}
@@ -219,9 +226,9 @@ const SettingsPage = () => {
           {/* Content */}
           <div className="lg:col-span-3">
             {activeTab === 'profile' && (
-              <Card>
-                <div className="mb-6">
-                  <h2 className="text-lg font-medium text-gray-900">Profile Information</h2>
+              <Card className="overflow-hidden">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-900">Profile Information</h2>
                   <p className="text-sm text-gray-600">Update your personal information and email address.</p>
                 </div>
 
@@ -281,9 +288,9 @@ const SettingsPage = () => {
             )}
 
             {activeTab === 'password' && (
-              <Card>
-                <div className="mb-6">
-                  <h2 className="text-lg font-medium text-gray-900">Change Password</h2>
+              <Card className="overflow-hidden">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
                   <p className="text-sm text-gray-600">Ensure your account is using a long, random password to stay secure.</p>
                 </div>
 
@@ -386,42 +393,42 @@ const SettingsPage = () => {
         </div>
 
         {/* Account Information */}
-        <Card>
-          <div className="mb-4">
-            <h2 className="text-lg font-medium text-gray-900">Account Information</h2>
+        <Card className="overflow-hidden">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Account Information</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Role</label>
-              <p className="mt-1 text-sm text-gray-900 capitalize">
-                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                  user?.role === 'admin' ? 'bg-red-100 text-red-800' :
-                  user?.role === 'manager' ? 'bg-blue-100 text-blue-800' :
-                  'bg-green-100 text-green-800'
-                }`}>
-                  {user?.role}
-                </span>
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Account Status</label>
-              <p className="mt-1 text-sm text-gray-900">
-                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                  Active
-                </span>
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Member Since</label>
-              <p className="mt-1 text-sm text-gray-900">
-                {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
-              </p>
-            </div>
-          </div>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div>
+               <label className="block text-sm font-medium text-gray-700">Role</label>
+               <p className="mt-1 text-sm text-gray-900 capitalize">
+                 <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                   user?.role === 'admin' ? 'bg-red-100 text-red-800' :
+                   user?.role === 'manager' ? 'bg-blue-100 text-blue-800' :
+                   'bg-green-100 text-green-800'
+                 }`}>
+                   {user?.role}
+                 </span>
+               </p>
+             </div>
+             <div>
+               <label className="block text-sm font-medium text-gray-700">Account Status</label>
+               <p className="mt-1 text-sm text-gray-900">
+                 <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                   Active
+                 </span>
+               </p>
+             </div>
+             <div>
+               <label className="block text-sm font-medium text-gray-700">Member Since</label>
+               <p className="mt-1 text-sm text-gray-900">
+                 {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
+               </p>
+             </div>
+           </div>
         </Card>
-      </div>
-    </DashboardLayout>
-  );
-};
+       </div>
+     </DashboardLayout>
+   );
+ }
 
-export default SettingsPage;
+ export default SettingsPage;
