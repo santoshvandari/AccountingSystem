@@ -32,7 +32,7 @@ const Card = ({
   };
 
   const classes = `
-    bg-white border border-gray-200
+    bg-white/90 backdrop-blur-sm border border-gray-200 hover:border-gray-300 transition-all duration-200
     ${paddingClasses[padding]}
     ${shadowClasses[shadow]}
     ${roundedClasses[rounded]}

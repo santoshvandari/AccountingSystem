@@ -12,7 +12,7 @@ import Toast from '../components/Toast/Toast';
 import ConfirmModal from '../components/Modal/ConfirmModal';
 import { transactionAPI } from '../api';
 import { formatCurrency } from '../config/currency';
-import { Plus, Edit, Trash2, Eye, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Search, CreditCard } from 'lucide-react';
 
 const TransactionsPage = () => {
     const [transactions, setTransactions] = useState([]);
@@ -247,15 +247,27 @@ const TransactionsPage = () => {
             />
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
-                        <p className="text-gray-600">Manage your financial transactions</p>
+                <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-xl p-6 text-white">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center space-x-3">
+                            <div className="bg-white/20 p-3 rounded-lg">
+                                <CreditCard className="w-8 h-8" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold">Transactions</h1>
+                                <p className="text-blue-100 mt-1">Manage your financial transactions</p>
+                            </div>
+                        </div>
+                        <div className="mt-4 sm:mt-0 flex space-x-2">
+                            <Button
+                                onClick={handleCreate}
+                                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Add Transaction
+                            </Button>
+                        </div>
                     </div>
-                    <Button onClick={handleCreate} className="mt-4 sm:mt-0">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Transaction
-                    </Button>
                 </div>
 
                 {/* Error Alert */}
@@ -267,15 +279,15 @@ const TransactionsPage = () => {
                     />
                 )}
 
-                {/* Search and Filters */}
-                <Card>
+                {/* Search */}
+                <Card className="bg-gradient-to-r from-gray-50 to-white border-gray-200">
                     <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex-1 relative">
                             <InputField
                                 placeholder="Search transactions..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                inputClassName="pl-10"
+                                inputClassName="pl-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                             />
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <Search className="h-4 w-4 text-gray-400" />
@@ -285,17 +297,22 @@ const TransactionsPage = () => {
                 </Card>
 
                 {/* Transactions Table */}
-                <Card>
+                <Card className="overflow-hidden shadow-lg">
                     {loading ? (
-                        <div className="flex justify-center py-8">
+                        <div className="flex justify-center py-12">
                             <Loading size="lg" />
                         </div>
                     ) : (
-                        <Table
-                            columns={columns}
-                            data={filteredTransactions}
-                            className="min-w-full"
-                        />
+                        <>
+                            <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                                <h3 className="text-lg font-semibold text-gray-900">Transactions ({filteredTransactions.length})</h3>
+                            </div>
+                            <Table
+                                columns={columns}
+                                data={filteredTransactions}
+                                className="min-w-full"
+                            />
+                        </>
                     )}
                 </Card>
 
@@ -304,6 +321,8 @@ const TransactionsPage = () => {
                     isOpen={showModal}
                     onClose={() => setShowModal(false)}
                     title={
+                        modalMode === 'create' ? '🎯 Add Transaction' :
+                            modalMode === 'edit' ? '✏️ Edit Transaction' :
                         modalMode === 'create' ? 'Add Transaction' :
                             modalMode === 'edit' ? 'Edit Transaction' :
                                 'Transaction Details'
