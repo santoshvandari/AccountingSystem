@@ -972,7 +972,9 @@ const BillsPage = () => {
           title={
             modalMode === 'create' ? '🧾 Create Invoice' :
             modalMode === 'edit' ? '✏️ Edit Invoice' :
-            '📄 Invoice Details'
+            modalMode === 'create' ? 'Create Invoice' :
+            modalMode === 'edit' ? 'Edit Invoice' :
+            'Invoice Details'
           }
           size="lg"
         >
