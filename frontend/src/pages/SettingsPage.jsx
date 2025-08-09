@@ -6,7 +6,7 @@ import InputField from '../components/InputField/InputField';
 import Alert from '../components/Alert/Alert';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../api';
-import { User, Lock, Save, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Save, Eye, EyeOff, Settings } from 'lucide-react';
 
 const SettingsPage = () => {
   const { user, updateUser } = useAuth();
