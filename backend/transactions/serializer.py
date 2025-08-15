@@ -25,7 +25,7 @@ class CreateTransactionSerializer(serializers.ModelSerializer):
 class UpdateTransactionSerializer(serializers.Serializer):
     received_from = serializers.CharField(write_only=True)
     amount = serializers.DecimalField(write_only=True,max_digits=12, decimal_places=2)
-    note = serializers.CharField(write_only=True)
+    note = serializers.CharField(write_only=True, allow_blank=True, required=False)
     date = serializers.DateTimeField(write_only=True)
 
     def update(self, instance, validated_data):

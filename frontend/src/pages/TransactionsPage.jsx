@@ -11,7 +11,7 @@ import Alert from '../components/Alert/Alert';
 import Toast from '../components/Toast/Toast';
 import ConfirmModal from '../components/Modal/ConfirmModal';
 import { transactionAPI } from '../api';
-import { formatCurrency } from '../config/currency';
+import { formatCurrency, parseAmount } from '../config/currency';
 import { Plus, Edit, Trash2, Eye, Search, CreditCard } from 'lucide-react';
 
 const TransactionsPage = () => {
@@ -46,7 +46,25 @@ const TransactionsPage = () => {
             setTransactions(response.data);
             setError(null);
         } catch (err) {
-            setError('Failed to fetch transactions');
+            let errorMsg = 'Failed to fetch transactions';
+            
+            if (err?.data) {
+                if (typeof err.data === 'string') {
+                    errorMsg = err.data;
+                } else if (typeof err.data === 'object') {
+                    if (err.data.error) {
+                        errorMsg = err.data.error;
+                    } else if (err.data.message) {
+                        errorMsg = err.data.message;
+                    } else if (err.data.detail) {
+                        errorMsg = err.data.detail;
+                    }
+                }
+            } else if (err?.message) {
+                errorMsg = err.message;
+            }
+            
+            setError(errorMsg);
             console.error('Fetch transactions error:', err);
         } finally {
             setLoading(false);
@@ -103,7 +121,25 @@ const TransactionsPage = () => {
             setTransactions(prev => prev.filter(t => t.id !== transaction.id));
             showToast(`Transaction from "${transaction.received_from || 'Unknown'}" deleted successfully`, 'success');
         } catch (err) {
-            showToast(`Failed to delete transaction: ${err.message || 'Unknown error'}`, 'error');
+            let errorMsg = 'Failed to delete transaction';
+            
+            if (err?.data) {
+                if (typeof err.data === 'string') {
+                    errorMsg = err.data;
+                } else if (typeof err.data === 'object') {
+                    if (err.data.error) {
+                        errorMsg = err.data.error;
+                    } else if (err.data.message) {
+                        errorMsg = err.data.message;
+                    } else if (err.data.detail) {
+                        errorMsg = err.data.detail;
+                    }
+                }
+            } else if (err?.message) {
+                errorMsg = err.message;
+            }
+            
+            showToast(errorMsg, 'error', 5000);
             console.error('Delete transaction error:', err);
         } finally {
             setConfirmLoading(false);
@@ -118,8 +154,9 @@ const TransactionsPage = () => {
             errors.received_from = 'Received from is required';
         }
 
-        if (!formData.amount || parseFloat(formData.amount) <= 0) {
-            errors.amount = 'Amount must be greater than 0';
+        const amount = parseAmount(formData.amount);
+        if (!formData.amount || isNaN(amount) || amount <= 0) {
+            errors.amount = 'Amount must be a valid number greater than 0';
         }
 
         if (!formData.date) {
@@ -139,8 +176,16 @@ const TransactionsPage = () => {
 
         setSubmitting(true);
         try {
+            // Prepare data with proper number conversion using parseAmount
+            const submitData = {
+                ...formData,
+                amount: parseAmount(formData.amount)
+            };
+
+            console.log('Submitting transaction data:', submitData);
+
             if (modalMode === 'create') {
-                const response = await transactionAPI.createTransaction(formData);
+                const response = await transactionAPI.createTransaction(submitData);
                 setTransactions(prev => [response.data, ...prev]);
                 setShowModal(false);
                 
@@ -148,7 +193,7 @@ const TransactionsPage = () => {
                 setSuccessModal({ open: true, transaction: response.data });
                 showToast('Transaction created successfully', 'success');
             } else {
-                const response = await transactionAPI.updateTransaction(selectedTransaction.id, formData);
+                const response = await transactionAPI.updateTransaction(selectedTransaction.id, submitData);
                 setTransactions(prev => prev.map(t =>
                     t.id === selectedTransaction.id ? response.data : t
                 ));
@@ -157,13 +202,59 @@ const TransactionsPage = () => {
             }
         } catch (err) {
             let errorMsg = `Failed to ${modalMode} transaction`;
+            
+            // Better error parsing based on the API structure
             if (err?.data) {
-                if (typeof err.data === 'string') errorMsg += `: ${err.data}`;
-                else if (typeof err.data === 'object') errorMsg += `: ${Object.values(err.data).join(', ')}`;
+                if (typeof err.data === 'string') {
+                    errorMsg = err.data;
+                } else if (typeof err.data === 'object') {
+                    // Handle validation errors
+                    if (err.data.error) {
+                        errorMsg = err.data.error;
+                    } else if (err.data.message) {
+                        errorMsg = err.data.message;
+                    } else if (err.data.detail) {
+                        errorMsg = err.data.detail;
+                    } else {
+                        // Handle field-specific errors
+                        const fieldErrors = Object.entries(err.data)
+                            .map(([field, errors]) => {
+                                if (Array.isArray(errors)) {
+                                    return `${field}: ${errors.join(', ')}`;
+                                }
+                                return `${field}: ${errors}`;
+                            })
+                            .join('; ');
+                        if (fieldErrors) {
+                            errorMsg = fieldErrors;
+                        }
+                    }
+                }
             } else if (err?.message) {
-                errorMsg += `: ${err.message}`;
+                errorMsg = err.message;
+            } else if (err?.status) {
+                switch (err.status) {
+                    case 400:
+                        errorMsg = 'Invalid data provided. Please check your inputs.';
+                        break;
+                    case 401:
+                        errorMsg = 'Authentication required. Please login again.';
+                        break;
+                    case 403:
+                        errorMsg = 'You do not have permission to perform this action.';
+                        break;
+                    case 404:
+                        errorMsg = 'Resource not found.';
+                        break;
+                    case 500:
+                        errorMsg = 'Server error. Please try again later.';
+                        break;
+                    default:
+                        errorMsg = `Request failed with status ${err.status}`;
+                }
             }
-            showToast(errorMsg, 'error');
+            
+            showToast(errorMsg, 'error', 5000); // Show for 5 seconds for errors
             console.error(`${modalMode} transaction error:`, err);
         } finally {
             setSubmitting(false);
@@ -172,6 +263,12 @@ const TransactionsPage = () => {
 
     const handleFormChange = (e) => {
         const { name, value } = e.target;
+        
+        // Debug logging for amount field
+        if (name === 'amount') {
+            console.log('Amount input:', value, 'Parsed:', parseAmount(value));
+        }
+        
         setFormData(prev => ({ ...prev, [name]: value }));
         if (formErrors[name]) {
             setFormErrors(prev => ({ ...prev, [name]: '' }));
@@ -237,75 +334,87 @@ const TransactionsPage = () => {
 
     return (
         <DashboardLayout>
-            {/* Toast Notification */}
-            {toast.visible && (
-                <Toast
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={handleCloseToast}
-                    duration={toast.duration}
-                />
-            )}
-            {/* Confirm Modal for Delete */}
-            <ConfirmModal
-                isOpen={confirmState.open}
-                title="Delete Transaction"
-                message={`Are you sure you want to delete this transaction from ${confirmState.transaction?.received_from}?`}
-                onConfirm={handleConfirmDelete}
-                onCancel={() => setConfirmState({ open: false, transaction: null })}
-                confirmText="Delete"
-                cancelText="Cancel"
-                loading={confirmLoading}
-            />
-            {/* Success Modal for Transaction Creation */}
-            <Modal
-                isOpen={successModal.open}
-                onClose={() => setSuccessModal({ open: false, transaction: null })}
-                title="Transaction Created Successfully!"
-                size="md"
-            >
-                <div className="space-y-4">
-                    <div className="text-center">
-                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                        </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">
-                            Transaction recorded successfully!
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                            {formatCurrency(successModal.transaction?.amount || 0)} from {successModal.transaction?.received_from}
-                        </p>
-                    </div>
-                    
-                    <div className="space-y-3">
-                        <p className="text-sm text-gray-600 text-center">
-                            Transaction has been added to your records.
-                        </p>
-                        
-                        <Button
-                            onClick={() => setSuccessModal({ open: false, transaction: null })}
-                            className="w-full"
-                        >
-                            Continue
-                        </Button>
-                        
-                        <Button
-                            onClick={() => {
-                                setSuccessModal({ open: false, transaction: null });
-                                handleCreate();
-                            }}
-                            variant="outline"
-                            className="w-full"
-                        >
-                            Add Another Transaction
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
-
             <div className="space-y-6">
+                {/* Toast Notification - Moved to top */}
+                {toast.visible && (
+                    <div className="fixed top-4 right-4 z-50">
+                        <Toast
+                            message={toast.message}
+                            type={toast.type}
+                            onClose={handleCloseToast}
+                            duration={toast.duration}
+                        />
+                    </div>
+                )}
+                
+                {/* Error Alert */}
+                {error && (
+                    <Alert
+                        type="error"
+                        message={error}
+                        onClose={() => setError(null)}
+                    />
+                )}
+
+                {/* Confirm Modal for Delete */}
+                <ConfirmModal
+                    isOpen={confirmState.open}
+                    title="Delete Transaction"
+                    message={`Are you sure you want to delete this transaction from ${confirmState.transaction?.received_from}?`}
+                    onConfirm={handleConfirmDelete}
+                    onCancel={() => setConfirmState({ open: false, transaction: null })}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    loading={confirmLoading}
+                />
+                
+                {/* Success Modal for Transaction Creation */}
+                <Modal
+                    isOpen={successModal.open}
+                    onClose={() => setSuccessModal({ open: false, transaction: null })}
+                    title="Transaction Created Successfully!"
+                    size="md"
+                >
+                    <div className="space-y-4">
+                        <div className="text-center">
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                Transaction recorded successfully!
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                                {formatCurrency(successModal.transaction?.amount || 0)} from {successModal.transaction?.received_from}
+                            </p>
+                        </div>
+                        
+                        <div className="space-y-3">
+                            <p className="text-sm text-gray-600 text-center">
+                                Transaction has been added to your records.
+                            </p>
+                            
+                            <Button
+                                onClick={() => setSuccessModal({ open: false, transaction: null })}
+                                className="w-full"
+                            >
+                                Continue
+                            </Button>
+                            
+                            <Button
+                                onClick={() => {
+                                    setSuccessModal({ open: false, transaction: null });
+                                    handleCreate();
+                                }}
+                                variant="outline"
+                                className="w-full"
+                            >
+                                Add Another Transaction
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-xl p-6 text-white">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -329,15 +438,6 @@ const TransactionsPage = () => {
                         </div>
                     </div>
                 </div>
-
-                {/* Error Alert */}
-                {error && (
-                    <Alert
-                        type="error"
-                        message={error}
-                        onClose={() => setError(null)}
-                    />
-                )}
 
                 {/* Search */}
                 <Card className="bg-gradient-to-r from-gray-50 to-white border-gray-200">
@@ -386,9 +486,9 @@ const TransactionsPage = () => {
                     isOpen={showModal}
                     onClose={() => setShowModal(false)}
                     title={
-                        modalMode === 'create' ? '💰 Add Transaction' :
-                            modalMode === 'edit' ? '✏️ Edit Transaction' :
-                                '📊 Transaction Details'
+                        modalMode === 'create' ? 'Add Transaction' :
+                            modalMode === 'edit' ? 'Edit Transaction' :
+                                'Transaction Details'
                     }
                     size="lg"
                 >
@@ -545,7 +645,7 @@ const TransactionsPage = () => {
                                         <div className="flex justify-between">
                                             <span className="font-bold text-green-900">Amount:</span>
                                             <span className="text-xl font-bold text-green-600">
-                                                {formatCurrency(parseFloat(formData.amount) || 0)}
+                                                {formatCurrency(parseAmount(formData.amount || 0))}
                                             </span>
                                         </div>
                                     </div>

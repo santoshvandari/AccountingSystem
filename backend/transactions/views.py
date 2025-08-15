@@ -37,7 +37,7 @@ class CreateTransaction(APIView):
         serializer = CreateTransactionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"message": "Transaction Created Successfully"},status=status.HTTP_201_CREATED)
+        return Response(serializer.data,status=status.HTTP_201_CREATED)
     
 
 class UpdateTransaction(APIView):
@@ -61,7 +61,7 @@ class UpdateTransaction(APIView):
         serializer = UpdateTransactionSerializer(transaction, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"message": "Transaction Updated Successfully"}, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
 class GetTransactionDetail(APIView):
     permission_classes = [permissions.IsAuthenticated]
