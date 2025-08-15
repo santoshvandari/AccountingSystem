@@ -105,6 +105,13 @@ const TransactionsPage = () => {
 
     const showToast = (message, type = 'info', duration = 3000) => {
         setToast({ message, type, visible: true, duration });
+        
+        // Auto-close after duration
+        if (duration > 0) {
+            setTimeout(() => {
+                setToast(prev => ({ ...prev, visible: false }));
+            }, duration);
+        }
     };
 
     const handleCloseToast = () => setToast(t => ({ ...t, visible: false }));
@@ -181,8 +188,6 @@ const TransactionsPage = () => {
                 ...formData,
                 amount: parseAmount(formData.amount)
             };
-
-            console.log('Submitting transaction data:', submitData);
 
             if (modalMode === 'create') {
                 const response = await transactionAPI.createTransaction(submitData);
@@ -263,12 +268,6 @@ const TransactionsPage = () => {
 
     const handleFormChange = (e) => {
         const { name, value } = e.target;
-        
-        // Debug logging for amount field
-        if (name === 'amount') {
-            console.log('Amount input:', value, 'Parsed:', parseAmount(value));
-        }
-        
         setFormData(prev => ({ ...prev, [name]: value }));
         if (formErrors[name]) {
             setFormErrors(prev => ({ ...prev, [name]: '' }));
@@ -335,15 +334,23 @@ const TransactionsPage = () => {
     return (
         <DashboardLayout>
             <div className="space-y-6">
-                {/* Toast Notification - Moved to top */}
+                {/* Toast Notification - Fixed z-index to be above modals */}
                 {toast.visible && (
-                    <div className="fixed top-4 right-4 z-50">
-                        <Toast
-                            message={toast.message}
-                            type={toast.type}
-                            onClose={handleCloseToast}
-                            duration={toast.duration}
-                        />
+                    <div className="fixed top-4 right-4 z-[9999]">
+                        <div className={`px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
+                            toast.type === 'success' ? 'bg-green-600 text-white' :
+                            toast.type === 'error' ? 'bg-red-600 text-white' :
+                            toast.type === 'warning' ? 'bg-yellow-500 text-white' :
+                            'bg-blue-600 text-white'
+                        }`}>
+                            <span>{toast.message}</span>
+                            <button 
+                                className="ml-2 text-white/80 hover:text-white" 
+                                onClick={handleCloseToast}
+                            >
+                                &times;
+                            </button>
+                        </div>
                     </div>
                 )}
                 
@@ -356,65 +363,6 @@ const TransactionsPage = () => {
                     />
                 )}
 
-                {/* Confirm Modal for Delete */}
-                <ConfirmModal
-                    isOpen={confirmState.open}
-                    title="Delete Transaction"
-                    message={`Are you sure you want to delete this transaction from ${confirmState.transaction?.received_from}?`}
-                    onConfirm={handleConfirmDelete}
-                    onCancel={() => setConfirmState({ open: false, transaction: null })}
-                    confirmText="Delete"
-                    cancelText="Cancel"
-                    loading={confirmLoading}
-                />
-                
-                {/* Success Modal for Transaction Creation */}
-                <Modal
-                    isOpen={successModal.open}
-                    onClose={() => setSuccessModal({ open: false, transaction: null })}
-                    title="Transaction Created Successfully!"
-                    size="md"
-                >
-                    <div className="space-y-4">
-                        <div className="text-center">
-                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                                <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                            </div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                Transaction recorded successfully!
-                            </h3>
-                            <p className="text-sm text-gray-500">
-                                {formatCurrency(successModal.transaction?.amount || 0)} from {successModal.transaction?.received_from}
-                            </p>
-                        </div>
-                        
-                        <div className="space-y-3">
-                            <p className="text-sm text-gray-600 text-center">
-                                Transaction has been added to your records.
-                            </p>
-                            
-                            <Button
-                                onClick={() => setSuccessModal({ open: false, transaction: null })}
-                                className="w-full"
-                            >
-                                Continue
-                            </Button>
-                            
-                            <Button
-                                onClick={() => {
-                                    setSuccessModal({ open: false, transaction: null });
-                                    handleCreate();
-                                }}
-                                variant="outline"
-                                className="w-full"
-                            >
-                                Add Another Transaction
-                            </Button>
-                        </div>
-                    </div>
-                </Modal>
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-xl p-6 text-white">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -676,6 +624,65 @@ const TransactionsPage = () => {
                     )}
                 </Modal>
             </div>
+
+            {/* Modals */}
+            <ConfirmModal
+                isOpen={confirmState.open}
+                title="Delete Transaction"
+                message={`Are you sure you want to delete this transaction from ${confirmState.transaction?.received_from}?`}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setConfirmState({ open: false, transaction: null })}
+                confirmText="Delete"
+                cancelText="Cancel"
+                loading={confirmLoading}
+            />
+            
+            <Modal
+                isOpen={successModal.open}
+                onClose={() => setSuccessModal({ open: false, transaction: null })}
+                title="Transaction Created Successfully!"
+                size="md"
+            >
+                <div className="space-y-4">
+                    <div className="text-center">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            Transaction recorded successfully!
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                            {formatCurrency(successModal.transaction?.amount || 0)} from {successModal.transaction?.received_from}
+                        </p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                        <p className="text-sm text-gray-600 text-center">
+                            Transaction has been added to your records.
+                        </p>
+                        
+                        <Button
+                            onClick={() => setSuccessModal({ open: false, transaction: null })}
+                            className="w-full"
+                        >
+                            Continue
+                        </Button>
+                        
+                        <Button
+                            onClick={() => {
+                                setSuccessModal({ open: false, transaction: null });
+                                handleCreate();
+                            }}
+                            variant="outline"
+                            className="w-full"
+                        >
+                            Add Another Transaction
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </DashboardLayout>
     );
 };
