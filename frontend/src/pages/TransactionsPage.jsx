@@ -33,6 +33,7 @@ const TransactionsPage = () => {
     const [toast, setToast] = useState({ message: '', type: 'info', visible: false });
     const [confirmState, setConfirmState] = useState({ open: false, transaction: null });
     const [confirmLoading, setConfirmLoading] = useState(false);
+    const [successModal, setSuccessModal] = useState({ open: false, transaction: null });
 
     useEffect(() => {
         fetchTransactions();
@@ -141,6 +142,10 @@ const TransactionsPage = () => {
             if (modalMode === 'create') {
                 const response = await transactionAPI.createTransaction(formData);
                 setTransactions(prev => [response.data, ...prev]);
+                setShowModal(false);
+                
+                // Show success modal with options
+                setSuccessModal({ open: true, transaction: response.data });
                 showToast('Transaction created successfully', 'success');
             } else {
                 const response = await transactionAPI.updateTransaction(selectedTransaction.id, formData);
@@ -148,10 +153,17 @@ const TransactionsPage = () => {
                     t.id === selectedTransaction.id ? response.data : t
                 ));
                 showToast('Transaction updated successfully', 'success');
+                setShowModal(false);
             }
-            setShowModal(false);
         } catch (err) {
-            showToast(`Failed to ${modalMode} transaction`, 'error');
+            let errorMsg = `Failed to ${modalMode} transaction`;
+            if (err?.data) {
+                if (typeof err.data === 'string') errorMsg += `: ${err.data}`;
+                else if (typeof err.data === 'object') errorMsg += `: ${Object.values(err.data).join(', ')}`;
+            } else if (err?.message) {
+                errorMsg += `: ${err.message}`;
+            }
+            showToast(errorMsg, 'error');
             console.error(`${modalMode} transaction error:`, err);
         } finally {
             setSubmitting(false);
@@ -245,6 +257,54 @@ const TransactionsPage = () => {
                 cancelText="Cancel"
                 loading={confirmLoading}
             />
+            {/* Success Modal for Transaction Creation */}
+            <Modal
+                isOpen={successModal.open}
+                onClose={() => setSuccessModal({ open: false, transaction: null })}
+                title="Transaction Created Successfully!"
+                size="md"
+            >
+                <div className="space-y-4">
+                    <div className="text-center">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            Transaction recorded successfully!
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                            {formatCurrency(successModal.transaction?.amount || 0)} from {successModal.transaction?.received_from}
+                        </p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                        <p className="text-sm text-gray-600 text-center">
+                            Transaction has been added to your records.
+                        </p>
+                        
+                        <Button
+                            onClick={() => setSuccessModal({ open: false, transaction: null })}
+                            className="w-full"
+                        >
+                            Continue
+                        </Button>
+                        
+                        <Button
+                            onClick={() => {
+                                setSuccessModal({ open: false, transaction: null });
+                                handleCreate();
+                            }}
+                            variant="outline"
+                            className="w-full"
+                        >
+                            Add Another Transaction
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
             <div className="space-y-6">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-xl p-6 text-white">
@@ -263,7 +323,7 @@ const TransactionsPage = () => {
                                 onClick={handleCreate}
                                 className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
                             >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-4 h-4 mr-2" />
                                 Add Transaction
                             </Button>
                         </div>
@@ -284,13 +344,18 @@ const TransactionsPage = () => {
                     <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex-1 relative">
                             <InputField
-                                placeholder="Search transactions..."
+                                placeholder="Search transactions by sender or note..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 inputClassName="pl-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                             />
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <Search className="h-4 w-4 text-gray-400" />
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <div className="text-sm text-gray-600 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                                <span className="font-medium text-blue-700">{filteredTransactions.length}</span> transactions found
                             </div>
                         </div>
                     </div>
@@ -321,87 +386,188 @@ const TransactionsPage = () => {
                     isOpen={showModal}
                     onClose={() => setShowModal(false)}
                     title={
-                        modalMode === 'create' ? '🎯 Add Transaction' :
+                        modalMode === 'create' ? '💰 Add Transaction' :
                             modalMode === 'edit' ? '✏️ Edit Transaction' :
-                        modalMode === 'create' ? 'Add Transaction' :
-                            modalMode === 'edit' ? 'Edit Transaction' :
-                                'Transaction Details'
+                                '📊 Transaction Details'
                     }
-                    size="md"
+                    size="lg"
                 >
                     {modalMode === 'view' ? (
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Received From</label>
-                                <p className="mt-1 text-sm text-gray-900">{selectedTransaction?.received_from}</p>
+                        <div className="space-y-6">
+                            {/* Transaction Header */}
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-blue-900">TRANSACTION</h3>
+                                        <p className="text-blue-700 font-medium">#{selectedTransaction?.id}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs text-gray-600">Transaction Date</p>
+                                        <p className="text-sm font-medium">{new Date(selectedTransaction?.date).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Amount</label>
-                                <p className="mt-1 text-sm text-gray-900">
-                                    {formatCurrency(selectedTransaction?.amount || 0)}
-                                </p>
+
+                            {/* Transaction Details */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 className="font-medium text-gray-900 mb-2">Payment From:</h4>
+                                    <div className="bg-gray-50 p-3 rounded-lg">
+                                        <p className="font-medium text-sm">{selectedTransaction?.received_from}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="font-medium text-gray-900 mb-2">Amount</h4>
+                                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-200">
+                                        <p className="text-2xl font-bold text-green-600">
+                                            {formatCurrency(selectedTransaction?.amount || 0)}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Date</label>
-                                <p className="mt-1 text-sm text-gray-900">
-                                    {new Date(selectedTransaction?.date).toLocaleDateString()}
-                                </p>
+
+                            {/* Additional Details */}
+                            <div className="grid grid-cols-1 gap-4">
+                                <div>
+                                    <h4 className="font-medium text-gray-900 mb-2">Transaction Date</h4>
+                                    <div className="bg-gray-50 p-3 rounded-lg">
+                                        <p className="text-sm text-gray-900">
+                                            {new Date(selectedTransaction?.date).toLocaleDateString('en-US', {
+                                                weekday: 'long',
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric'
+                                            })}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {selectedTransaction?.note && (
+                                    <div>
+                                        <h4 className="font-medium text-gray-900 mb-2">Notes</h4>
+                                        <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                                            <p className="text-sm text-gray-700">{selectedTransaction.note}</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Note</label>
-                                <p className="mt-1 text-sm text-gray-900">{selectedTransaction?.note || 'No note provided'}</p>
+
+                            {/* Transaction Summary */}
+                            <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border">
+                                <h4 className="text-sm font-medium text-gray-900 mb-3">Transaction Summary</h4>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Transaction ID:</span>
+                                        <span className="font-medium">#{selectedTransaction?.id}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Received From:</span>
+                                        <span className="font-medium">{selectedTransaction?.received_from}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Date:</span>
+                                        <span className="font-medium">{new Date(selectedTransaction?.date).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="border-t pt-2">
+                                        <div className="flex justify-between">
+                                            <span className="font-bold text-gray-900">Amount:</span>
+                                            <span className="text-xl font-bold text-green-600">{formatCurrency(selectedTransaction?.amount || 0)}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     ) : (
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <InputField
-                                label="Received From"
-                                name="received_from"
-                                value={formData.received_from}
-                                onChange={handleFormChange}
-                                error={formErrors.received_from}
-                                required
-                            />
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Basic Transaction Information */}
+                            <div className="space-y-4">
+                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                                    <h4 className="text-sm font-medium text-blue-900 mb-1">Transaction Details</h4>
+                                    <p className="text-xs text-blue-700">Enter the payment information below</p>
+                                </div>
 
-                            <CurrencyInput
-                                label="Amount"
-                                name="amount"
-                                value={formData.amount}
-                                onChange={handleFormChange}
-                                error={formErrors.amount}
-                                required
-                            />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <InputField
+                                        label="Received From"
+                                        name="received_from"
+                                        value={formData.received_from}
+                                        onChange={handleFormChange}
+                                        error={formErrors.received_from}
+                                        required
+                                        placeholder="Customer, client, or source name"
+                                    />
 
-                            <InputField
-                                label="Date"
-                                name="date"
-                                type="date"
-                                value={formData.date}
-                                onChange={handleFormChange}
-                                error={formErrors.date}
-                                required
-                            />
+                                    <InputField
+                                        label="Transaction Date"
+                                        name="date"
+                                        type="date"
+                                        value={formData.date}
+                                        onChange={handleFormChange}
+                                        error={formErrors.date}
+                                        required
+                                    />
+                                </div>
 
-                            <InputField
-                                label="Note"
-                                name="note"
-                                value={formData.note}
-                                onChange={handleFormChange}
-                                placeholder="Optional note..."
-                            />
+                                <CurrencyInput
+                                    label="Amount"
+                                    name="amount"
+                                    value={formData.amount}
+                                    onChange={handleFormChange}
+                                    error={formErrors.amount}
+                                    required
+                                    placeholder="0.00"
+                                />
 
-                            <div className="flex space-x-3 pt-4">
+                                <InputField
+                                    label="Note / Description"
+                                    name="note"
+                                    value={formData.note}
+                                    onChange={handleFormChange}
+                                    placeholder="Add a description or note for this transaction..."
+                                />
+                            </div>
+
+                            {/* Transaction Summary */}
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+                                <h4 className="text-sm font-medium text-green-900 mb-3">Transaction Summary</h4>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-green-700">From:</span>
+                                        <span className="font-medium text-green-900">{formData.received_from || 'Not specified'}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-green-700">Date:</span>
+                                        <span className="font-medium text-green-900">
+                                            {formData.date ? new Date(formData.date).toLocaleDateString() : 'Not selected'}
+                                        </span>
+                                    </div>
+                                    <div className="border-t border-green-200 pt-2">
+                                        <div className="flex justify-between">
+                                            <span className="font-bold text-green-900">Amount:</span>
+                                            <span className="text-xl font-bold text-green-600">
+                                                {formatCurrency(parseFloat(formData.amount) || 0)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 pt-4 border-t border-gray-200">
                                 <Button
                                     type="submit"
                                     loading={submitting}
                                     disabled={submitting}
+                                    className="flex-1"
                                 >
-                                    {modalMode === 'create' ? 'Create Transaction' : 'Update Transaction'}
+                                    {submitting ? 'Processing...' : (modalMode === 'create' ? 'Create Transaction' : 'Update Transaction')}
                                 </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
                                     onClick={() => setShowModal(false)}
+                                    className="flex-1"
+                                    disabled={submitting}
                                 >
                                     Cancel
                                 </Button>
