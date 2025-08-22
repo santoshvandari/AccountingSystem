@@ -1,9 +1,11 @@
 import uuid
+from datetime import datetime
 from billing.models import Bill
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 def generate_bill_number(self):
         """Generate a unique bill number"""
-        import uuid
-        from datetime import datetime
         
         # Try to make a unique number with date + random
         date_part = datetime.now().strftime("%y%m%d")
@@ -22,3 +24,18 @@ def generate_bill_number(self):
                 break
                 
         return bill_number
+
+
+
+
+# Function to get or create a deleted user  
+def get_deleted_user():
+    return User.objects.get_or_create(
+        email="deleted@example.com",
+        defaults={
+            "username": "deleted_user",
+            "full_name": "Deleted User",
+            "role": "cashier",  # or any default role
+            "is_active": False,
+        }
+    )[0]

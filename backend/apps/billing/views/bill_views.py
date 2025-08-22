@@ -24,7 +24,7 @@ class BillListCreateView(APIView):
             
             # Generate unique bill number if not provided or empty
             if not data.get('bill_number') or not data.get('bill_number').strip():
-                data['bill_number'] = self.generate_bill_number()
+                data['bill_number'] = generate_bill_number()
             
             # Set the issued_by field to the current user
             data['issued_by'] = request.user.id

@@ -111,16 +111,16 @@ class PostBillSerializer(ModelSerializer):
         return instance
 
 
-class BillPDFSerializer(ModelSerializer):
-    bill_items = BillItemSerializer(many=True, read_only=True)
-    issued_by = UserSerializer(read_only=True)
+# class BillPDFSerializer(ModelSerializer):
+#     bill_items = BillItemSerializer(many=True, read_only=True)
+#     issued_by = UserSerializer(read_only=True)
     
-    class Meta:
-        model = Bill
-        fields = [
-            'id', 'bill_number', 'billed_to', 'customer_address', 'customer_phone',
-            'customer_email', 'subtotal', 'tax_percentage', 'tax_amount',
-            'discount_percentage', 'discount_amount', 'total_amount',
-            'payment_method', 'payment_details', 'note', 'issued_by',
-            'issued_at', 'bill_items'
-        ]
+#     class Meta:
+#         model = Bill
+#         fields = [
+#             'id', 'bill_number', 'billed_to', 'customer_address', 'customer_phone',
+#             'customer_email', 'subtotal', 'tax_percentage', 'tax_amount',
+#             'discount_percentage', 'discount_amount', 'total_amount',
+#             'payment_method', 'payment_details', 'note', 'issued_by',
+#             'issued_at', 'bill_items'
+#         ]
