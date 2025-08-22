@@ -1,6 +1,7 @@
 # Phase 2 - Backend Folder Structure
 
 ## Implemented Backend Structure
+```bash
 backend/
 ├── apps/                               # All domain-driven apps
 │   ├── auth/                           # Users, memberships, roles
@@ -72,3 +73,4 @@ backend/
 ├── Dockerfile
 ├── docker-compose.yml
 └── .gitignore
+```
