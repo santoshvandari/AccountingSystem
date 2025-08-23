@@ -42,9 +42,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework', # Django REST Framework for API development
     'corsheaders', # CORS headers for cross-origin requests
-    'accounts',  # Custom app for user management
+    'apps.accounts',  # Custom app for user management
     'transactions',  # Custom app for transaction management
-    'billing',  # Custom app for billing management
+    'apps.billing',  # Custom app for billing management
 
 
 
