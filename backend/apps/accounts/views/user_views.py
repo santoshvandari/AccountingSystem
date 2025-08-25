@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
 from accounts.serializers import UserSerializer,ChangePasswordSerializer
-from core.permissions import IsManagerOrAbove,IsSuperUserOnly
+from common.permissions import IsManagerOrAbove,IsSuperUserOnly
 from django.contrib.auth import get_user_model
 
 User = get_user_model()

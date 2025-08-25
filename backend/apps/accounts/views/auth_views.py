@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
 from accounts.serializers import UserSerializer,LoginSerializer
-from core.permissions import CanCreateUsers
+from common.permissions import CanCreateUsers
 
 from django.contrib.auth import authenticate
 from accounts.utils import get_tokens_for_user

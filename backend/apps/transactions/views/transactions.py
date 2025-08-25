@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework import permissions
 from transactions.serializer import CreateTransactionSerializer, GetTransactionSerializer, GetTransactionSummarySerializer,UpdateTransactionSerializer
 from transactions.models import Transaction
-from core.permissions import TransactionPermissions, CashierReadOnlyAfterCreation, IsSuperUserOnly
+from common.permissions import TransactionPermissions, CashierReadOnlyAfterCreation, IsSuperUserOnly
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q,Sum

@@ -1,4 +1,3 @@
-from datetime import timezone,datetime
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from accounts.manager import UserManager

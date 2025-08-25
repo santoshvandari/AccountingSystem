@@ -5,7 +5,7 @@ from billing.models import Bill
 from billing.serializers import GetBillSerializer, PostBillSerializer
 from rest_framework import permissions
 from django.db import transaction
-from core.permissions import BillingPermissions, CashierReadOnlyAfterCreation, IsSuperUserOnly
+from common.permissions import BillingPermissions, CashierReadOnlyAfterCreation, IsSuperUserOnly
 from billing.utils import generate_bill_number
 
 # Create your views here.
