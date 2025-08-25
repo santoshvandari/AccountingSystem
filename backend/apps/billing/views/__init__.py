@@ -1,1 +1,1 @@
-from bill_views import *
+from .bill_views import *

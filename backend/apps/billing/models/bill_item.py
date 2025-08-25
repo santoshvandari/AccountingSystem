@@ -1,5 +1,5 @@
 from django.db import models
-from billing.models import Bill
+from .bill import Bill
 
 class BillItem(models.Model):
     bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='bill_items')

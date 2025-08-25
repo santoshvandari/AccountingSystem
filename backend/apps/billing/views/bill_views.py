@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from billing.models import Bill
-from billing.serializers import GetBillSerializer, PostBillSerializer
+from apps.billing.models import Bill
+from apps.billing.serializers import GetBillSerializer, PostBillSerializer
 from rest_framework import permissions
 from django.db import transaction
 from common.permissions import BillingPermissions, CashierReadOnlyAfterCreation, IsSuperUserOnly

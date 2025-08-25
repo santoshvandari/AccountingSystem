@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from transactions.models import Transaction
+from apps.transactions.models import Transaction
 from django.contrib.auth import get_user_model
 from datetime import datetime,timezone
 

@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
-from accounts.serializers import UserSerializer,ChangePasswordSerializer
+from apps.accounts.serializers import UserSerializer,ChangePasswordSerializer
 from common.permissions import IsManagerOrAbove,IsSuperUserOnly
 from django.contrib.auth import get_user_model
 

@@ -1,6 +1,6 @@
 from rest_framework.serializers import ModelSerializer
 from rest_framework import serializers
-from billing.models import Bill, BillItem
+from apps.billing.models import Bill, BillItem
 from django.contrib.auth import get_user_model
 
 User = get_user_model()

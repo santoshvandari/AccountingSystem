@@ -2,11 +2,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
-from accounts.serializers import UserSerializer,LoginSerializer
+from apps.accounts.serializers import UserSerializer,LoginSerializer
 from common.permissions import CanCreateUsers
 
 from django.contrib.auth import authenticate
-from accounts.utils import get_tokens_for_user
+from apps.accounts.utils import get_tokens_for_user
 from django.contrib.auth import get_user_model
 
 import logging

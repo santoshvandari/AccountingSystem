@@ -2,8 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import permissions
-from transactions.serializer import CreateTransactionSerializer, GetTransactionSerializer, GetTransactionSummarySerializer,UpdateTransactionSerializer
-from transactions.models import Transaction
+from apps.transactions.serializer import CreateTransactionSerializer, GetTransactionSerializer, GetTransactionSummarySerializer,UpdateTransactionSerializer
+from apps.transactions.models import Transaction
 from common.permissions import TransactionPermissions, CashierReadOnlyAfterCreation, IsSuperUserOnly
 
 from django.contrib.auth import get_user_model

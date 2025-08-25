@@ -1,5 +1,5 @@
 from django.urls import path
-from billing import views
+from . import views
 
 urlpatterns = [
     path("", views.BillListCreateView.as_view(), name="bill-list-create"),

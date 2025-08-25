@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
-from accounts.manager import UserManager
+from apps.accounts.manager import UserManager
 
 class User(AbstractBaseUser, PermissionsMixin):
     ROLE_CHOICES = (

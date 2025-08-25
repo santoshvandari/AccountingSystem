@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from accounts.models import User
+from apps.accounts.models import User
 
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)

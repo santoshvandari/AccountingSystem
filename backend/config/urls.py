@@ -44,13 +44,13 @@ urlpatterns = [
    
 
     # Accounts app URLs
-    path('api/accounts/', include('accounts.urls')),
+    path('api/accounts/', include('apps.accounts.urls')),
 
     # Transactions app URLs
-    path('api/transactions/', include('transactions.urls')),
+    path('api/transactions/', include('apps.transactions.urls')),
 
     # Billing app URLs
-    path('api/bills/', include('billing.urls')),
+    path('api/bills/', include('apps.billing.urls')),
 
 
 
