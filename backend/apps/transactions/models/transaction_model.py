@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from transactions.utils import get_deleted_user
+from common.utils import get_deleted_user
 from django.contrib.auth import get_user_model
 
 User = get_user_model()

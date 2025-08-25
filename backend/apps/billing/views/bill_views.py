@@ -6,7 +6,7 @@ from billing.serializers import GetBillSerializer, PostBillSerializer
 from rest_framework import permissions
 from django.db import transaction
 from common.permissions import BillingPermissions, CashierReadOnlyAfterCreation, IsSuperUserOnly
-from billing.utils import generate_bill_number
+from common.utils import generate_bill_number
 
 # Create your views here.
 class BillListCreateView(APIView):

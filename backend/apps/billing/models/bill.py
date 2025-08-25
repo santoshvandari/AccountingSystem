@@ -2,7 +2,7 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from billing.utils import get_deleted_user
+from common.utils import get_deleted_user
 
 User = get_user_model()
 
