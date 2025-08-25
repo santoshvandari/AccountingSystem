@@ -1,0 +1,11 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.BillListCreateView.as_view(), name="bill-list-create"),
+    path("<int:id>/", views.BillDetailView.as_view(), name="bill-detail"),
+    path("<int:id>/update/", views.BillUpdateView.as_view(), name="bill-update"),
+    path("<int:id>/delete/", views.BillDeleteView.as_view(), name="bill-delete"),
+    # PDF generation is now handled in frontend
+    # path("<int:id>/pdf/", views.BillPDFView.as_view(), name="bill-pdf"),
+]
