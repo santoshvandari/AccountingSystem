@@ -1,4 +1,4 @@
-from base import BASE_DIR
+from .base import BASE_DIR
 from datetime import timedelta
 
 # SECURITY WARNING: keep the secret key used in production secret!
