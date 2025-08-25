@@ -67,13 +67,13 @@ class LoginView(APIView):
             if user is not None:
                 if user.is_active:
                     token = get_tokens_for_user(user)
-                    reponse = {
+                    response = {
                         "email": user.email,
                         "full_name": user.full_name,
                         "role": user.role,
                     }
-                    reponse.update(token)
-                    return Response(reponse, status=status.HTTP_200_OK)
+                    response.update(token)
+                    return Response(response, status=status.HTTP_200_OK)
 
                 return Response({"error": "User is inactive"}, status=status.HTTP_403_FORBIDDEN)
             return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
