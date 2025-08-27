@@ -4,3 +4,4 @@ __pycache__
 000*.py
 *.txt
 *.log
+.env
