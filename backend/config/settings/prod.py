@@ -27,8 +27,7 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(seconds=int(os.environ.get("ACCESS_TOKEN_LIFETIME"))),
     "REFRESH_TOKEN_LIFETIME": timedelta(seconds=int(os.environ.get("REFRESH_TOKEN_LIFETIME"))),
     "UPDATE_LAST_LOGIN": True,
-    "SIGNING_KEY": os.environ.get("JWT_SIGNING_KEY"),
-    # "SIGNING_KEY": "<Use Strong in Production>",  # ToDo: Use a more secure key in production
+    "SIGNING_KEY": os.environ.get("JWT_SIGNING_KEY"), # openssl rand --hex 64 -> use to generate Key
 
 
 }
