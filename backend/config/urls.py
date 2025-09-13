@@ -53,6 +53,10 @@ urlpatterns = [
     path('api/bills/', include('apps.billing.urls')),
 
 
+    # Reports app URLs
+    path('api/reports/', include('apps.reports.urls')),
+
+
 
 ]
 
