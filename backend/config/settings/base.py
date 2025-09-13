@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 from django.conf import settings
 
@@ -134,3 +135,167 @@ REST_FRAMEWORK = {
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'  # Use the custom user model defined in accounts app
+
+
+# Logging Configuration
+# https://docs.djangoproject.com/en/5.2/topics/logging/
+
+# Create logs directory if it doesn't exist
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'standard': {
+            'format': '{levelname} {asctime} {name} {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+        'json': {
+            'format': '{"time": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s", "module": "%(module)s", "funcName": "%(funcName)s", "lineno": %(lineno)d}',
+            'datefmt': '%Y-%m-%dT%H:%M:%S',
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+            'filters': ['require_debug_true'],
+        },
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'django.log',
+            'maxBytes': 1024*1024*10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'django_errors.log',
+            'maxBytes': 1024*1024*10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'security_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'security.log',
+            'maxBytes': 1024*1024*5,  # 5 MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        },
+        'database_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'database.log',
+            'maxBytes': 1024*1024*5,  # 5 MB
+            'backupCount': 3,
+            'formatter': 'verbose',
+        },
+        'api_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOGS_DIR / 'api.log',
+            'maxBytes': 1024*1024*10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'json',
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'filters': ['require_debug_false'],
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'level': 'INFO',
+        'handlers': ['console', 'file'],
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['error_file', 'mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['security_file', 'mail_admins'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['database_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Custom app loggers
+        'apps.accounts': {
+            'handlers': ['console', 'api_file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.transactions': {
+            'handlers': ['console', 'api_file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.billing': {
+            'handlers': ['console', 'api_file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.reports': {
+            'handlers': ['console', 'api_file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # DRF and JWT logging
+        'rest_framework': {
+            'handlers': ['api_file', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'rest_framework_simplejwt': {
+            'handlers': ['security_file', 'api_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Third-party packages
+        'corsheaders': {
+            'handlers': ['security_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
