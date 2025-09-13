@@ -1,13 +1,14 @@
 from .base import BASE_DIR
 from datetime import timedelta
+import os
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-b)8+v9vhk5&ik6=k8@@f7y5ug9o(3x8*1)45jt8yj)yghsb*ot'
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "insecure-dev-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [os.environ.get("ALLOWED_HOSTS", "localhost").split(",")]
 
 
 # Database
@@ -15,17 +16,17 @@ ALLOWED_HOSTS = []
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': os.environ.get("DATABASE_ENGINE", "django.db.backends.sqlite3"),
+        'NAME': BASE_DIR / os.environ.get("DATABASE_NAME", "db.sqlite3"),
     }
 }
 
 
 # simple jwt Settings
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=3),
-    # "SIGNING_KEY": "<Use Strong in Production>",  # ToDo: Use a more secure key in production
+    "ACCESS_TOKEN_LIFETIME": timedelta(seconds=int(os.environ.get("ACCESS_TOKEN_LIFETIME", 300))),
+    "REFRESH_TOKEN_LIFETIME": timedelta(seconds=int(os.environ.get("REFRESH_TOKEN_LIFETIME", 900))),
+    "SIGNING_KEY": os.environ.get("SIGNING_KEY", "<Use Strong in Production>"),  # ToDo: Use a more secure key in production
 
 
 }
