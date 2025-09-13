@@ -54,7 +54,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
+    # Custom logging middleware
+    'common.middleware.RequestLoggingMiddleware',
+    'common.middleware.ErrorLoggingMiddleware',
+    'common.middleware.SecurityLoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -135,6 +138,12 @@ REST_FRAMEWORK = {
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'  # Use the custom user model defined in accounts app
+
+
+# Logging Configuration Constants
+SLOW_REQUEST_THRESHOLD = 2.0  # Log requests taking longer than 2 seconds
+MAX_LOG_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+LOG_BACKUP_COUNT = 5
 
 
 # Logging Configuration
